@@ -8,8 +8,9 @@ import {
   Card,
   CardDescription,
   CardHeader,
-  CardTitle
+  CardTitle,
 } from "./components/ui/card";
+import { ComboBoxResponsive } from "@/components/combobox";
 
 interface Team {
   name: string;
@@ -60,15 +61,19 @@ function App() {
   return (
     // <> div className="flex flex-col items-center justify-center gap-6 bg-muted p-6 md:p-10"
     <>
-      <Card>
-        <div className="flex flex-col min-h-svh items-center justify-center gap-4 ">
+      <>
+        <div className="flex flex-col min-h-svh items-center justify-center gap-4">
           <CardHeader className="text-center">
             <h1>Score Mate</h1>
           </CardHeader>
-          <Button variant="outline" onClick={newGame}>
-            New game
-          </Button>
-          <div className="flex w-full max-w-sm flex-row gap-6 items-center justify-center">
+          <div className="flex flex-row gap-3">
+            <ComboBoxResponsive></ComboBoxResponsive>
+            <Button variant="outline" onClick={newGame}>
+              New game
+            </Button>
+          </div>
+
+          <div className="flex w-full max-w-sm flex-row gap-6 items-center justify-center m-2">
             <Input
               type="text"
               value={newTeamName}
@@ -87,12 +92,13 @@ function App() {
                 <Card className="flex">
                   <CardHeader className=" flex flex-row text-center gap-4">
                     <CardTitle className="text-xl">{team.name}</CardTitle>
-                    <CardDescription>{team.score}</CardDescription>
+                    <CardDescription>Score: {team.score}</CardDescription>
                   </CardHeader>
                   <div className="flex flex-row items-center justify-center gap-2 pr-6">
                     <Input
                       type="number"
                       value={pointsToAdd[index] || ""}
+                      className="w-20"
                       onChange={(e) =>
                         setPointsToAdd({
                           ...pointsToAdd,
@@ -115,7 +121,7 @@ function App() {
             ))}
           </div>
         </div>
-      </Card>
+      </>
     </>
   );
 }
