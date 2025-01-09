@@ -16,33 +16,24 @@ import {
   PopoverTrigger,
   PopoverContent,
 } from "@radix-ui/react-popover";
+import { gameConfigs } from "@/lib/types";
 
-type Status = {
+export type GameConfig = {
   value: string;
   label: string;
+  maxTeams: number;
+  maxScore: number;
 };
 
-const statuses: Status[] = [
-  {
-    value: "domino",
-    label: "Dómino",
-  },
-  {
-    value: "pantano",
-    label: "Pantano",
-  },
-  {
-    value: "pocker",
-    label: "Pocker",
-  },
-];
-
-export function ComboBoxResponsive() {
+export function ComboBoxResponsive({
+  setGameConfig,
+}: {
+  setGameConfig: React.Dispatch<React.SetStateAction<GameConfig>>;
+}) {
   const [open, setOpen] = React.useState(false);
   const isDesktop = useMediaQuery("(min-width: 768px)");
-  const [selectedStatus, setSelectedStatus] = React.useState<Status | null>(
-    null
-  );
+  const [selectedGameConfig, setSelectedGameConfig] =
+    React.useState<GameConfig | null>(null);
 
   if (isDesktop) {
     return (
@@ -50,13 +41,18 @@ export function ComboBoxResponsive() {
         <Popover open={open} onOpenChange={setOpen}>
           <PopoverTrigger asChild>
             <Button variant="outline">
-              {selectedStatus ? <>{selectedStatus.label}</> : <> Set game</>}
+              {selectedGameConfig ? (
+                <>{selectedGameConfig.label}</>
+              ) : (
+                <>Set game</>
+              )}
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-[200px] p-0" align="start">
-            <StatusList
+            <GameConfigList
               setOpen={setOpen}
-              setSelectedStatus={setSelectedStatus}
+              setSelectedGameConfig={setSelectedGameConfig}
+              setGameConfig={setGameConfig}
             />
           </PopoverContent>
         </Popover>
@@ -68,43 +64,53 @@ export function ComboBoxResponsive() {
     <Drawer open={open} onOpenChange={setOpen}>
       <DrawerTrigger asChild>
         <Button variant="outline" className="justify-start">
-          {selectedStatus ? <>{selectedStatus.label}</> : <> Set game</>}
+          {selectedGameConfig ? <>{selectedGameConfig.label}</> : <>Set game</>}
         </Button>
       </DrawerTrigger>
       <DrawerContent>
         <div className="mt-4 border-t">
-          <StatusList setOpen={setOpen} setSelectedStatus={setSelectedStatus} />
+          <GameConfigList
+            setOpen={setOpen}
+            setSelectedGameConfig={setSelectedGameConfig}
+            setGameConfig={setGameConfig}
+          />
         </div>
       </DrawerContent>
     </Drawer>
   );
 }
 
-function StatusList({
+function GameConfigList({
   setOpen,
-  setSelectedStatus,
+  setSelectedGameConfig,
+  setGameConfig,
 }: {
   setOpen: (open: boolean) => void;
-  setSelectedStatus: (status: Status | null) => void;
+  setSelectedGameConfig: (config: GameConfig | null) => void;
+  setGameConfig: React.Dispatch<React.SetStateAction<GameConfig>>;
 }) {
   return (
     <Command>
-      <CommandInput placeholder="Filter status..." />
+      <CommandInput placeholder="Filter game..." />
       <CommandList>
         <CommandEmpty>No results found.</CommandEmpty>
         <CommandGroup>
-          {statuses.map((status) => (
+          {gameConfigs.map((config) => (
             <CommandItem
-              key={status.value}
-              value={status.value}
+              key={config.value}
+              value={config.value}
               onSelect={(value) => {
-                setSelectedStatus(
-                  statuses.find((priority) => priority.value === value) || null
+                const selectedConfig = gameConfigs.find(
+                  (game) => game.value === value
                 );
+                if (selectedConfig) {
+                  setSelectedGameConfig(selectedConfig);
+                  setGameConfig(selectedConfig); // Pasar la configuración al componente principal
+                }
                 setOpen(false);
               }}
             >
-              {status.label}
+              {config.label}
             </CommandItem>
           ))}
         </CommandGroup>
