@@ -1,14 +1,18 @@
 // features/game/components/GameSettings.tsx
 
-import React from 'react';
-import { GameConfig } from "../types"; // Ajusta la ruta de types
-import { ComboBoxResponsive } from "@/components/combobox"; // Asume que este es tu componente ComboBox
+import React from "react";
+import { GameConfig } from "@/lib/types";
+import { ComboBoxResponsive } from "@/components/combobox";
+
+import { Dispatch, SetStateAction } from "react";
 
 interface GameSettingsProps {
-  setGameConfig: (config: GameConfig) => void;
+  setGameConfig: Dispatch<SetStateAction<GameConfig>>;
 }
 
-export const GameSettings: React.FC<GameSettingsProps> = ({ setGameConfig }) => {
+export const GameSettings: React.FC<GameSettingsProps> = ({
+  setGameConfig,
+}) => {
   return (
     // Asumimos que ComboBoxResponsive maneja su propia lista de configuraciones (gameConfigs)
     // o que se la pasas como prop si decides gestionarla centralmente.

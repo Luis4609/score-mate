@@ -1,7 +1,6 @@
-import { useState, useCallback } from "react";
-import { Team, GameConfig, PointsToAdd, HistoryEntry } from "@/lib/types";
 import { gameConfigs } from "@/features/game/game-config";
-import React from "react";
+import { GameConfig, HistoryEntry, PointsToAdd, Team } from "@/lib/types";
+import React, { useCallback, useState } from "react";
 
 export const useScoreMateGame = () => {
   const [gameConfig, setGameConfig] = useState<GameConfig>(gameConfigs[0]);
