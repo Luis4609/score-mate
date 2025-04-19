@@ -15,7 +15,11 @@ import {
 import { PointsToAdd, Team, gameConfigs } from "@/lib/types";
 
 function App() {
+  
   const [gameConfig, setGameConfig] = useState<GameConfig>(gameConfigs[0]); // Valor por defecto
+  const [history, setHistory] = useState<
+    Array<{ snapshot: Team[]; changedTeamIndex: number | null }>
+  >([]);
 
   const [teams, setTeams] = useState<Team[]>([]);
   const [newTeamName, setNewTeamName] = useState<string>("");
@@ -41,6 +45,12 @@ function App() {
         i === index ? { ...team, score: team.score + points } : team
       );
       setTeams(updatedTeams);
+
+      // 'index' es el índice del equipo al que se le acaban de sumar los puntos
+      setHistory((prevHistory) => [
+        ...prevHistory,
+        { snapshot: updatedTeams, changedTeamIndex: index },
+      ]);
     } else {
       setGameAlert(
         <GameAlert
@@ -52,10 +62,21 @@ function App() {
     }
   };
 
-  // Función para reiniciar la partida
   const newGame = () => {
     setTeams([]);
     setGameAlert(null);
+    setHistory([]);
+  };
+
+  // --- Función para reiniciar la partida manteniendo equipos
+  const restartGame = () => {
+    const teamsWithResetScores = teams.map((team) => ({
+      ...team,
+      score: 0,
+    }));
+    setTeams(teamsWithResetScores);
+    setGameAlert(null);
+    setHistory([{ snapshot: teamsWithResetScores, changedTeamIndex: null }]);
   };
 
   const handleCustomPoints = (index: number) => {
@@ -66,65 +87,130 @@ function App() {
 
   return (
     <div className="flex flex-col min-h-svh items-center justify-center gap-4 bg-background">
-      {/* TITULO */}
       <CardHeader className="text-center">
         <h1>Score Mate</h1>
       </CardHeader>
 
-      {/* SETTINGS */}
-      <div className="flex flex-row gap-3">
-        <ComboBoxResponsive setGameConfig={setGameConfig} />
-        <Button variant="destructive" onClick={newGame}>
-          New game
-        </Button>
-      </div>
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-row justify-between items-center">
+          <ComboBoxResponsive setGameConfig={setGameConfig} />
+          <Button variant="destructive" onClick={newGame}>
+            New game
+          </Button>
+        </div>
 
-      {/* añadir equipo */}
-      <div className="flex w-full max-w-sm flex-row gap-6 items-center justify-center m-2">
-        <Input
-          type="text"
-          value={newTeamName}
-          onChange={(e) => setNewTeamName(e.target.value)}
-          placeholder="Team name"
-        />
-        <Button onClick={addTeam}>Add team</Button>
-      </div>
+        {/* añadir equipo */}
+        <div className="flex w-full max-w-sm flex-row gap-6 items-center justify-center">
+          <Input
+            type="text"
+            value={newTeamName}
+            onChange={(e) => setNewTeamName(e.target.value)}
+            placeholder="Team name"
+          />
+          <Button onClick={addTeam}>Add team</Button>
+        </div>
 
-      {/* visualizacion de las puntuaciones */}
-      <div className="flex w-full max-w-sm flex-col gap-6">
-        {teams.map((team, index) => (
-          <div
-            key={index}
-            className="flex w-full max-w-sm flex-row gap-6 items-center justify-center rounded-md"
-          >
-            <Card className="flex surface ">
-              <CardHeader className=" flex flex-row text-center gap-4">
-                <CardTitle className="text-xl">{team.name}</CardTitle>
-                <CardDescription>Score: {team.score}</CardDescription>
-              </CardHeader>
-              <div className="flex flex-row items-center justify-center gap-2 pr-6">
-                <Input
-                  type="number"
-                  value={pointsToAdd[index] || ""}
-                  className="w-20"
-                  onChange={(e) =>
-                    setPointsToAdd({
-                      ...pointsToAdd,
-                      [index]: e.target.value,
-                    })
-                  }
-                />
-                <Button
-                  variant="secondary"
-                  onClick={() => handleCustomPoints(index)}
-                >
-                  Add
-                </Button>
-              </div>
-            </Card>
+        {/* visualizacion de las puntuaciones */}
+        <div className="flex w-full max-w-sm flex-col gap-6">
+          {teams.map((team, index) => (
+            <div
+              key={index}
+              className="flex w-full max-w-sm flex-row gap-6 items-center justify-center rounded-md"
+            >
+              <Card className="flex surface ">
+                <CardHeader className=" flex flex-row text-center gap-4">
+                  <CardTitle className="text-xl">{team.name}</CardTitle>
+                  <CardDescription>Score: {team.score}</CardDescription>
+                </CardHeader>
+                <div className="flex flex-row items-center justify-center gap-2 pr-6">
+                  <Input
+                    type="number"
+                    value={pointsToAdd[index] || ""}
+                    className="w-20"
+                    onChange={(e) =>
+                      setPointsToAdd({
+                        ...pointsToAdd,
+                        [index]: e.target.value,
+                      })
+                    }
+                  />
+                  <Button
+                    variant="secondary"
+                    onClick={() => handleCustomPoints(index)}
+                  >
+                    Add
+                  </Button>
+                </div>
+              </Card>
+            </div>
+          ))}
+          {gameAlert}
+        </div>
+
+        {/* Historial de puntuaciones */}
+        {history.length > 0 && (
+          <div className="flex w-full max-w-sm flex-col gap-2 mt-6">
+            {" "}
+            <h2 className="text-lg font-semibold text-center">
+              Historial de Partida
+            </h2>
+            <div className="overflow-x-auto rounded-md border border-border">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="bg-muted/50">
+                    {" "}
+                    <th className="border border-border p-3 text-left text-sm font-medium text-muted-foreground">
+                      Fase
+                    </th>
+                    {teams.map((team, index) => (
+                      <th
+                        key={index}
+                        className="border border-border p-3 text-left text-sm font-medium text-muted-foreground"
+                      >
+                        {team.name}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {history.map((historyEntry, index) => (
+                    <tr
+                      key={index}
+                      className="odd:bg-background even:bg-muted/20"
+                    >
+                      <td className="border border-border p-3 text-sm font-mono">
+                        {index + 1}
+                      </td>
+                      {/* Iteramos sobre el snapshot dentro del objeto de historial */}
+                      {historyEntry.snapshot.map(
+                        (teamScoreEntry, teamIndex) => (
+                          <td
+                            key={teamIndex}
+                            className={`border border-border p-3 text-sm font-mono ${
+                              historyEntry.changedTeamIndex === teamIndex
+                                ? "text-green-700 dark:text-green-400 font-bold"
+                                : "text-red-700 dark:text-red-400 font-bold"
+                            }`}
+                          >
+                            {teamScoreEntry.score}
+                          </td>
+                        )
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        ))}
-        {gameAlert}
+        )}
+
+        {teams.length > 0 && (
+          <div className="flex flex-row justify-end items-center">
+            <Button variant="outline" onClick={restartGame}>
+              Reiniciar Partida
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );
