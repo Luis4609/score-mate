@@ -1,16 +1,19 @@
-// App.tsx
+import "@/App.css";
+import React, { Suspense } from "react";
+import { GameAlert } from "@/components/game-alert";
+import { CardHeader } from "@/components/ui/card";
 
-import "./App.css"; // Mantén tus estilos globales si los usas aquí
-
-import { GameAlert } from "@/components/game-alert"; // Ajusta la ruta de importación
-import { CardHeader } from "@/components/ui/card"; // Ajusta la ruta de importación
-
-import { useScoreMateGame } from "@/features/game/useScoreGame"; // Importa el hook
-import { AddTeamForm } from "@/features/teams/components/add-team-form"; // Importa componentes UI
+import { useScoreMateGame } from "@/features/game/useScoreGame";
+import { AddTeamForm } from "@/features/teams/components/add-team-form";
 import { TeamsDisplay } from "@/features/teams/components/team-display";
 import { GameSettings } from "@/features/game/components/game-settings";
 import { GameControls } from "@/features/game/components/game-controls";
-import { HistoryTable } from "@/features/history/components/history-table";
+
+const HistoryTable = React.lazy(() =>
+  import("@/features/history/components/history-table").then((module) => ({
+    default: module.HistoryTable,
+  }))
+);
 
 function App() {
   const {
@@ -58,15 +61,18 @@ function App() {
           onHandleCustomPoints={handleCustomPoints}
         />
         {gameAlert && (
+          // TODO: añadir el equipo que ha ganado
           <GameAlert
-            title="Alerta de Juego"
-            description="Pepe" 
+            title="Fin de la partida"
+            description="Has ganado"
             variant="destructive"
-          >
-            {gameAlert}{" "}
-          </GameAlert>
+          ></GameAlert>
         )}
-        <HistoryTable history={history} teams={teams} />
+        <Suspense fallback={<div>Cargando historial...</div>}>
+          {history.length > 0 && (
+            <HistoryTable history={history} teams={teams} />
+          )}
+        </Suspense>
       </div>
     </div>
   );
