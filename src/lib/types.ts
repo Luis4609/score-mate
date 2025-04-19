@@ -1,7 +1,7 @@
 export interface AlertProps {
   title: string;
   description: string;
-  variant: "default" | "destructive"
+  variant: "default" | "destructive";
 }
 
 export interface Team {
@@ -13,10 +13,14 @@ export interface PointsToAdd {
   [key: number]: string;
 }
 
-// game config
-export const gameConfigs = [
-    { value: "domino", label: "Dómino", maxTeams: 2, maxScore: 200 },
-    { value: "pantano", label: "Pantano", maxTeams: 6, maxScore: 500 },
-    { value: "pocker", label: "Pocker", maxTeams: 6, maxScore: 15 },
-  ];
-  
+export interface GameConfig {
+  name: string;
+  value: string;
+  maxTeams: number;
+  maxScore: number;
+}
+
+export interface HistoryEntry {
+  snapshot: Team[];
+  changedTeamIndex: number | null;
+}

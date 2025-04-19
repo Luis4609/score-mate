@@ -16,14 +16,8 @@ import {
   PopoverTrigger,
   PopoverContent,
 } from "@radix-ui/react-popover";
-import { gameConfigs } from "@/lib/types";
-
-export type GameConfig = {
-  value: string;
-  label: string;
-  maxTeams: number;
-  maxScore: number;
-};
+import { GameConfig } from "@/lib/types";
+import { gameConfigs } from "@/features/game/game-config";
 
 export function ComboBoxResponsive({
   setGameConfig,
@@ -42,7 +36,7 @@ export function ComboBoxResponsive({
           <PopoverTrigger asChild>
             <Button variant="outline">
               {selectedGameConfig ? (
-                <>{selectedGameConfig.label}</>
+                <>{selectedGameConfig.value}</>
               ) : (
                 <>Set game</>
               )}
@@ -64,7 +58,7 @@ export function ComboBoxResponsive({
     <Drawer open={open} onOpenChange={setOpen}>
       <DrawerTrigger asChild>
         <Button variant="outline" className="justify-start">
-          {selectedGameConfig ? <>{selectedGameConfig.label}</> : <>Set game</>}
+          {selectedGameConfig ? <>{selectedGameConfig.value}</> : <>Set game</>}
         </Button>
       </DrawerTrigger>
       <DrawerContent>
@@ -110,7 +104,7 @@ function GameConfigList({
                 setOpen(false);
               }}
             >
-              {config.label}
+              {config.name}
             </CommandItem>
           ))}
         </CommandGroup>

@@ -1,216 +1,72 @@
-import { useState } from "react";
-import "./App.css";
+// App.tsx
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import "./App.css"; // Mantén tus estilos globales si los usas aquí
 
-import { ComboBoxResponsive, GameConfig } from "@/components/combobox";
-import { GameAlert } from "@/components/game-alert";
-import {
-  Card,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { PointsToAdd, Team, gameConfigs } from "@/lib/types";
+import { GameAlert } from "@/components/game-alert"; // Ajusta la ruta de importación
+import { CardHeader } from "@/components/ui/card"; // Ajusta la ruta de importación
+
+import { useScoreMateGame } from "@/features/game/useScoreGame"; // Importa el hook
+import { AddTeamForm } from "@/features/teams/components/add-team-form"; // Importa componentes UI
+import { TeamsDisplay } from "@/features/teams/components/team-display";
+import { GameSettings } from "@/features/game/components/game-settings";
+import { GameControls } from "@/features/game/components/game-controls";
+import { HistoryTable } from "@/features/history/components/history-table";
 
 function App() {
-  
-  const [gameConfig, setGameConfig] = useState<GameConfig>(gameConfigs[0]); // Valor por defecto
-  const [history, setHistory] = useState<
-    Array<{ snapshot: Team[]; changedTeamIndex: number | null }>
-  >([]);
+  const {
+    gameConfig,
+    teams,
+    newTeamName,
+    pointsToAdd,
+    gameAlert,
+    history,
+    setGameConfig,
+    setNewTeamName,
+    setPointsToAdd,
+    addTeam,
+    addScore,
+    handleCustomPoints,
+    restartGame,
+    newGame,
+  } = useScoreMateGame();
 
-  const [teams, setTeams] = useState<Team[]>([]);
-  const [newTeamName, setNewTeamName] = useState<string>("");
-  const [pointsToAdd, setPointsToAdd] = useState<PointsToAdd>({}); // Almacena puntos específicos para cada equipo
-
-  const [gameAlert, setGameAlert] = useState<React.ReactNode>(null);
-
-  const addTeam = () => {
-    if (newTeamName.trim() !== "" && teams.length < gameConfig.maxTeams) {
-      setTeams([...teams, { name: newTeamName, score: 0 }]);
-      setNewTeamName("");
-    } else if (teams.length >= gameConfig.maxTeams) {
-      alert(`No puedes agregar más de ${gameConfig.maxTeams} equipos.`);
-    }
-  };
-
-  // Función para agregar puntos, pero verifica si se ha alcanzado la puntuación máxima
-  const addScore = (index: number, points: number) => {
-    const team = teams[index];
-    // Verificamos si el equipo ha alcanzado el máximo de puntuación
-    if (team.score + points <= gameConfig.maxScore) {
-      const updatedTeams = teams.map((team, i) =>
-        i === index ? { ...team, score: team.score + points } : team
-      );
-      setTeams(updatedTeams);
-
-      // 'index' es el índice del equipo al que se le acaban de sumar los puntos
-      setHistory((prevHistory) => [
-        ...prevHistory,
-        { snapshot: updatedTeams, changedTeamIndex: index },
-      ]);
-    } else {
-      setGameAlert(
-        <GameAlert
-          title={"GAME OVER!"}
-          description={`${team.name} ha alcanzado el máximo de puntos (${gameConfig.maxScore})`}
-          variant="destructive"
-        ></GameAlert>
-      );
-    }
-  };
-
-  const newGame = () => {
-    setTeams([]);
-    setGameAlert(null);
-    setHistory([]);
-  };
-
-  // --- Función para reiniciar la partida manteniendo equipos
-  const restartGame = () => {
-    const teamsWithResetScores = teams.map((team) => ({
-      ...team,
-      score: 0,
-    }));
-    setTeams(teamsWithResetScores);
-    setGameAlert(null);
-    setHistory([{ snapshot: teamsWithResetScores, changedTeamIndex: null }]);
-  };
-
-  const handleCustomPoints = (index: number) => {
-    const points = parseInt(pointsToAdd[index]) || 0;
-    addScore(index, points);
-    setPointsToAdd({ ...pointsToAdd, [index]: "" });
-  };
+  const canAddTeam =
+    newTeamName.trim() !== "" && teams.length < gameConfig.maxTeams;
 
   return (
-    <div className="flex flex-col min-h-svh items-center justify-center gap-4 bg-background">
+    <div className="flex flex-col min-h-svh items-center justify-center gap-4 bg-background p-4">
       <CardHeader className="text-center">
-        <h1>Score Mate</h1>
+        <h1 className="text-3xl font-bold">Score Mate</h1>{" "}
       </CardHeader>
-
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-row justify-between items-center">
-          <ComboBoxResponsive setGameConfig={setGameConfig} />
-          <Button variant="destructive" onClick={newGame}>
-            New game
-          </Button>
+      <div className="flex flex-col gap-4 w-full max-w-sm">
+        {/* TODO */}
+        <div className="flex flex-row md:flex-row gap-4 w-full">
+          <GameSettings setGameConfig={setGameConfig} />{" "}
+          <GameControls onRestartGame={restartGame} onNewGame={newGame} />{" "}
         </div>
-
-        {/* añadir equipo */}
-        <div className="flex w-full max-w-sm flex-row gap-6 items-center justify-center">
-          <Input
-            type="text"
-            value={newTeamName}
-            onChange={(e) => setNewTeamName(e.target.value)}
-            placeholder="Team name"
-          />
-          <Button onClick={addTeam}>Add team</Button>
-        </div>
-
-        {/* visualizacion de las puntuaciones */}
-        <div className="flex w-full max-w-sm flex-col gap-6">
-          {teams.map((team, index) => (
-            <div
-              key={index}
-              className="flex w-full max-w-sm flex-row gap-6 items-center justify-center rounded-md"
-            >
-              <Card className="flex surface ">
-                <CardHeader className=" flex flex-row text-center gap-4">
-                  <CardTitle className="text-xl">{team.name}</CardTitle>
-                  <CardDescription>Score: {team.score}</CardDescription>
-                </CardHeader>
-                <div className="flex flex-row items-center justify-center gap-2 pr-6">
-                  <Input
-                    type="number"
-                    value={pointsToAdd[index] || ""}
-                    className="w-20"
-                    onChange={(e) =>
-                      setPointsToAdd({
-                        ...pointsToAdd,
-                        [index]: e.target.value,
-                      })
-                    }
-                  />
-                  <Button
-                    variant="secondary"
-                    onClick={() => handleCustomPoints(index)}
-                  >
-                    Add
-                  </Button>
-                </div>
-              </Card>
-            </div>
-          ))}
-          {gameAlert}
-        </div>
-
-        {/* Historial de puntuaciones */}
-        {history.length > 0 && (
-          <div className="flex w-full max-w-sm flex-col gap-2 mt-6">
-            {" "}
-            <h2 className="text-lg font-semibold text-center">
-              Historial de Partida
-            </h2>
-            <div className="overflow-x-auto rounded-md border border-border">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr className="bg-muted/50">
-                    {" "}
-                    <th className="border border-border p-3 text-left text-sm font-medium text-muted-foreground">
-                      Fase
-                    </th>
-                    {teams.map((team, index) => (
-                      <th
-                        key={index}
-                        className="border border-border p-3 text-left text-sm font-medium text-muted-foreground"
-                      >
-                        {team.name}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {history.map((historyEntry, index) => (
-                    <tr
-                      key={index}
-                      className="odd:bg-background even:bg-muted/20"
-                    >
-                      <td className="border border-border p-3 text-sm font-mono">
-                        {index + 1}
-                      </td>
-                      {/* Iteramos sobre el snapshot dentro del objeto de historial */}
-                      {historyEntry.snapshot.map(
-                        (teamScoreEntry, teamIndex) => (
-                          <td
-                            key={teamIndex}
-                            className={`border border-border p-3 text-sm font-mono ${
-                              historyEntry.changedTeamIndex === teamIndex
-                                ? "text-green-700 dark:text-green-400 font-bold"
-                                : "text-red-700 dark:text-red-400 font-bold"
-                            }`}
-                          >
-                            {teamScoreEntry.score}
-                          </td>
-                        )
-                      )}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+        <AddTeamForm
+          newTeamName={newTeamName}
+          setNewTeamName={setNewTeamName}
+          onAddTeam={addTeam}
+          canAddTeam={canAddTeam}
+        />
+        <TeamsDisplay
+          teams={teams}
+          pointsToAdd={pointsToAdd}
+          setPointsToAdd={setPointsToAdd}
+          onAddScore={addScore}
+          onHandleCustomPoints={handleCustomPoints}
+        />
+        {gameAlert && (
+          <GameAlert
+            title="Alerta de Juego"
+            description="Pepe" 
+            variant="destructive"
+          >
+            {gameAlert}{" "}
+          </GameAlert>
         )}
-
-        {teams.length > 0 && (
-          <div className="flex flex-row justify-end items-center">
-            <Button variant="outline" onClick={restartGame}>
-              Reiniciar Partida
-            </Button>
-          </div>
-        )}
+        <HistoryTable history={history} teams={teams} />
       </div>
     </div>
   );
