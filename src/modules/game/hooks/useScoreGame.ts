@@ -23,7 +23,7 @@ export const useScoreMateGame = () => {
     }
   }, [newTeamName, teams, gameConfig.maxTeams]);
 
-  // Lógica para añadir puntuación a un equipo
+  // Logic to add score to a team
   const addScore = useCallback(
     (index: number, points: number) => {
       const team = teams[index];
@@ -41,7 +41,7 @@ export const useScoreMateGame = () => {
           { snapshot: updatedTeams, changedTeamIndex: index },
         ]);
       } else {
-        // Si se excede la puntuación máxima, establecemos la puntuación al máximo y mostramos la alerta
+        // If the maximum score is exceeded, set the score to the maximum and show the alert
         const updatedTeams = teams.map((team, i) =>
           i === index ? { ...team, score: gameConfig.maxScore } : team
         );
@@ -62,10 +62,10 @@ export const useScoreMateGame = () => {
               `${team.name} ha alcanzado el máximo de puntos (${gameConfig.maxScore})`
             )
           )
-          //     <GameAlert
-          //     title={"GAME OVER!"}
-          //     description={`${team.name} ha alcanzado el máximo de puntos (${gameConfig.maxScore})`}
-          //   ></GameAlert>
+          //       <GameAlert
+          //       title={"GAME OVER!"}
+          //       description={`${team.name} ha alcanzado el máximo de puntos (${gameConfig.maxScore})`}
+          //     ></GameAlert>
         );
       }
     },
@@ -90,7 +90,7 @@ export const useScoreMateGame = () => {
     }));
     setTeams(teamsWithResetScores);
     setGameAlert(null);
-    // Añadimos solo si hay equipos, para no tener una entrada vacía si no hay equipos
+    // Add only if there are teams, to avoid an empty entry if there are no teams
     if (teamsWithResetScores.length > 0) {
       setHistory([{ snapshot: teamsWithResetScores, changedTeamIndex: null }]);
     } else {
@@ -106,15 +106,144 @@ export const useScoreMateGame = () => {
     setPointsToAdd({});
   }, []);
 
+  // --- New Functionality: Edit Score in History ---
+  const editScoreInHistory = useCallback(
+    (historyIndex: number, teamIndex: number, newScore: number) => {
+      setHistory((prevHistory) => {
+        // Create a new history array starting from the edited point
+        const newHistory = prevHistory.slice(0, historyIndex + 1);
+
+        // Update the score in the snapshot of the edited history entry
+        const editedSnapshot = [...newHistory[historyIndex].snapshot];
+        if (editedSnapshot[teamIndex]) {
+          editedSnapshot[teamIndex] = {
+            ...editedSnapshot[teamIndex],
+            score: newScore,
+          };
+          newHistory[historyIndex] = {
+            ...newHistory[historyIndex],
+            snapshot: editedSnapshot,
+            // Mark which team's score was edited in this history entry
+            changedTeamIndex: teamIndex,
+          };
+        }
+
+        // Recalculate subsequent history entries and the current teams state
+        // based on the edited history entry.
+        let currentTeamsState = editedSnapshot;
+
+        for (let i = historyIndex + 1; i < prevHistory.length; i++) {
+          const previousSnapshot = newHistory[i - 1].snapshot;
+          const currentOriginalSnapshot = prevHistory[i].snapshot;
+          const changedTeamIndex = prevHistory[i].changedTeamIndex; // This can be number | null
+
+          // Only proceed if changedTeamIndex is a number
+          if (changedTeamIndex !== null) {
+            // Calculate the points added in the original history entry
+            const pointsAdded =
+              currentOriginalSnapshot[changedTeamIndex].score -
+              previousSnapshot[changedTeamIndex].score;
+
+            // Apply the same points added to the current teams state
+            const nextTeamsState = currentTeamsState.map((team, teamIdx) => {
+              if (teamIdx === changedTeamIndex) {
+                return { ...team, score: team.score + pointsAdded };
+              }
+              return team;
+            });
+
+            newHistory.push({
+              snapshot: nextTeamsState,
+              changedTeamIndex: changedTeamIndex,
+            });
+            currentTeamsState = nextTeamsState;
+          } else {
+            // If changedTeamIndex was null, it means no score was changed in the original entry.
+            // We still need to add this entry to the new history to maintain the sequence,
+            // but the teams state remains the same as the previous one.
+            newHistory.push({
+              snapshot: currentTeamsState, // Use the current state as the snapshot
+              changedTeamIndex: null, // Keep it null
+            });
+          }
+        }
+
+        // Update the current teams state to the final state after recalculation
+        setTeams(currentTeamsState);
+
+        // Clear game alert if it was based on the old score reaching max
+        if (
+          gameAlert &&
+          currentTeamsState.every((team) => team.score < gameConfig.maxScore)
+        ) {
+          setGameAlert(null);
+        }
+
+        return newHistory;
+      });
+    },
+    [gameAlert, gameConfig.maxScore] // Depend on gameAlert and maxScore to potentially clear the alert
+  );
+
+  // --- New Functionality: Remove Team ---
+  const removeTeam = useCallback(
+    (teamIndex: number) => {
+      setTeams((prevTeams) => {
+        // Filter out the team to be removed
+        const updatedTeams = prevTeams.filter(
+          (_, index) => index !== teamIndex
+        );
+
+        // Update history: Remove the score column for the removed team
+        setHistory((prevHistory) => {
+          return prevHistory
+            .map((entry) => {
+              const updatedSnapshot = entry.snapshot.filter(
+                (_, index) => index !== teamIndex
+              );
+              // Adjust changedTeamIndex if the removed team was before the changed team
+              const updatedChangedTeamIndex =
+                entry.changedTeamIndex !== null &&
+                entry.changedTeamIndex > teamIndex
+                  ? entry.changedTeamIndex - 1
+                  : entry.changedTeamIndex;
+
+              // If the removed team was the changed team, set changedTeamIndex to null or handle as needed
+              const finalChangedTeamIndex =
+                entry.changedTeamIndex === teamIndex
+                  ? null
+                  : updatedChangedTeamIndex;
+
+              return {
+                snapshot: updatedSnapshot,
+                changedTeamIndex: finalChangedTeamIndex,
+              };
+            })
+            .filter((entry) => entry.snapshot.length > 0); // Remove history entries if no teams are left
+        });
+
+        // Clear game alert if it was based on the removed team winning
+        if (gameAlert) {
+          // This part might need more specific logic depending on how your gameAlert is structured
+          // For simplicity, we'll just clear it if any team was removed.
+          setGameAlert(null);
+        }
+
+        return updatedTeams;
+      });
+    },
+    [gameAlert] // Depend on gameAlert to potentially clear the alert
+  );
+
   return {
-    // Estado accesible desde fuera del hook
+    // Accessible state from outside the hook
     gameConfig,
     teams,
     newTeamName,
     pointsToAdd,
     gameAlert,
     history,
-    // Funciones accesibles desde fuera del hook
+    // Accessible functions from outside the hook
     setGameConfig,
     setNewTeamName,
     setPointsToAdd,
@@ -123,5 +252,7 @@ export const useScoreMateGame = () => {
     handleCustomPoints,
     restartGame,
     newGame,
+    editScoreInHistory, // Make the new function accessible
+    removeTeam, // Make the new function accessible
   };
 };

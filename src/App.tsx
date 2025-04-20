@@ -30,6 +30,8 @@ function App() {
     handleCustomPoints,
     restartGame,
     newGame,
+    editScoreInHistory,
+    removeTeam,
   } = useScoreMateGame();
 
   const canAddTeam =
@@ -58,6 +60,7 @@ function App() {
           setPointsToAdd={setPointsToAdd}
           onAddScore={addScore}
           onHandleCustomPoints={handleCustomPoints}
+          onRemoveTeam={removeTeam}
         />
         {gameAlert && (
           // TODO: añadir el equipo que ha ganado
@@ -69,7 +72,11 @@ function App() {
         )}
         <Suspense fallback={<div>Cargando historial...</div>}>
           {history.length > 0 && (
-            <HistoryTable history={history} teams={teams} />
+            <HistoryTable
+              history={history}
+              teams={teams}
+              onEditScore={editScoreInHistory}
+            />
           )}
         </Suspense>
       </div>
