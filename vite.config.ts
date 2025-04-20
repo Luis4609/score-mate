@@ -12,7 +12,7 @@ export default defineConfig({
     },
   },
   test: {
-    globals: true, // Por ejemplo, para no importar describe, it, expect
-    environment: 'jsdom', // Si estás probando componentes de UI (React, Vue, etc.)
+    globals: true,
+    environment: "jsdom",
   },
 });

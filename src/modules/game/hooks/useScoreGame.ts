@@ -1,4 +1,4 @@
-import { gameConfigs } from "@/features/game/game-config";
+import { gameConfigs } from "@/modules/game/config/game-config";
 import { GameConfig, HistoryEntry, PointsToAdd, Team } from "@/lib/types";
 import React, { useCallback, useState } from "react";
 

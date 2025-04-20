@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button";
 interface AddTeamFormProps {
   newTeamName: string;
   setNewTeamName: (name: string) => void;
-  onAddTeam: () => void; // La función para añadir equipo viene de arriba
-  canAddTeam: boolean; // Lógica para habilitar o deshabilitar el botón
+  onAddTeam: () => void;
+  canAddTeam: boolean;
 }
 
 export const AddTeamForm: React.FC<AddTeamFormProps> = ({
@@ -17,7 +17,6 @@ export const AddTeamForm: React.FC<AddTeamFormProps> = ({
   onAddTeam,
   canAddTeam, // Si decides añadir esta lógica aquí o pasarla desde el hook
 }) => {
-  // Manejar la pulsación de Enter en el input
   const handleKeyPress = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Enter" && canAddTeam) {
       onAddTeam();
@@ -31,7 +30,7 @@ export const AddTeamForm: React.FC<AddTeamFormProps> = ({
         placeholder="Team name"
         value={newTeamName}
         onChange={(e) => setNewTeamName(e.target.value)}
-        onKeyDown={handleKeyPress} // Añadido manejo de Enter
+        onKeyDown={handleKeyPress}
       />
       <Button onClick={onAddTeam} disabled={!canAddTeam}>
         Add team

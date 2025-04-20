@@ -1,16 +1,15 @@
-import "@/App.css";
 import React, { Suspense } from "react";
 import { GameAlert } from "@/components/game-alert";
 import { CardHeader } from "@/components/ui/card";
 
-import { useScoreMateGame } from "@/features/game/useScoreGame";
-import { AddTeamForm } from "@/features/teams/components/add-team-form";
-import { TeamsDisplay } from "@/features/teams/components/team-display";
-import { GameSettings } from "@/features/game/components/game-settings";
-import { GameControls } from "@/features/game/components/game-controls";
+import { useScoreMateGame } from "@/modules/game/hooks/useScoreGame";
+import { AddTeamForm } from "@/modules/teams/components/add-team-form";
+import { TeamsDisplay } from "@/modules/teams/components/team-display";
+import { GameSettings } from "@/modules/game/components/game-settings";
+import { GameControls } from "@/modules/game/components/game-controls";
 
 const HistoryTable = React.lazy(() =>
-  import("@/features/history/components/history-table").then((module) => ({
+  import("@/modules/history/components/history-table").then((module) => ({
     default: module.HistoryTable,
   }))
 );
@@ -42,7 +41,7 @@ function App() {
         <h1 className="text-3xl font-bold">Score Mate</h1>{" "}
       </CardHeader>
       <div className="flex flex-col gap-4 w-full max-w-sm">
-        {/* TODO */}
+        {/* TODO: check better layout */}
         <div className="flex flex-row md:flex-row gap-4 w-full">
           <GameSettings setGameConfig={setGameConfig} />{" "}
           <GameControls onRestartGame={restartGame} onNewGame={newGame} />{" "}

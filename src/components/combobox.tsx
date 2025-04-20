@@ -17,7 +17,7 @@ import {
   PopoverContent,
 } from "@radix-ui/react-popover";
 import { GameConfig } from "@/lib/types";
-import { gameConfigs } from "@/features/game/game-config";
+import { gameConfigs } from "@/modules/game/config/game-config";
 
 export function ComboBoxResponsive({
   setGameConfig,
