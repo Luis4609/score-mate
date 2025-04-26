@@ -1,42 +1,50 @@
 import { Input } from "@/components/ui/input"; // Assuming Input is available for editing
 import { HistoryEntry, Team } from "@/lib/types";
+// Assuming getScoreDiff and getTeamTotals are correctly implemented
+import { getScoreDiff, getTeamTotals } from "../utils/history-table-utils";
 import React, { useState } from "react"; // Import useState
 
 interface HistoryTableProps {
   history: HistoryEntry[];
-  teams: Team[]; // This prop seems unused in the current component logic for rendering the table body, but is used for table header.
+  teams: Team[]; // Used for table header and potentially for total calculation logic
   onEditScore: (
     historyIndex: number,
     teamIndex: number,
-    newScore: number
-  ) => void; // Added prop for editing score
+    newDelta: number // newDelta represents the change in score for this phase
+  ) => void; // Prop to notify parent component of score edit
 }
 
 export const HistoryTable: React.FC<HistoryTableProps> = ({
   history,
-  teams, // Keep teams for the header
-  onEditScore, // Destructure the new prop
+  teams,
+  onEditScore,
 }) => {
+  // Recalculate teamTotals whenever the 'history' prop changes
+  // React will automatically re-run this when 'history' updates
+  const teamTotals = getTeamTotals(history, teams.length);
+
   // State to manage which cell is being edited { historyIndex: number, teamIndex: number } or null
   const [editingCell, setEditingCell] = useState<{
     historyIndex: number;
     teamIndex: number;
   } | null>(null);
+
   // State to hold the value of the input field during editing
   const [editedScore, setEditedScore] = useState<string>("");
 
   if (history.length === 0) {
-    return null;
+    return null; // Render nothing if there's no history
   }
 
   // Function to start editing a cell
   const handleEditClick = (
     historyIndex: number,
     teamIndex: number,
-    currentScore: number
   ) => {
+    // Calculate the current delta for this phase and team to pre-fill the input
+    const delta = getScoreDiff(history, historyIndex, teamIndex);
     setEditingCell({ historyIndex, teamIndex });
-    setEditedScore(currentScore.toString()); // Set the initial value of the input to the current score
+    setEditedScore(delta.toString());
   };
 
   // Function to handle input change during editing
@@ -46,17 +54,16 @@ export const HistoryTable: React.FC<HistoryTableProps> = ({
 
   // Function to handle saving the edited score
   const handleSaveEdit = (historyIndex: number, teamIndex: number) => {
-    const score = parseInt(editedScore, 10); // Parse the input value as an integer
-
-    // Check if the parsed score is a valid number
-    if (!isNaN(score)) {
-      onEditScore(historyIndex, teamIndex, score); // Call the onEditScore prop
+    const delta = parseInt(editedScore, 10);
+    // Check if the parsed value is a valid number
+    if (!isNaN(delta)) {
+      // Call the parent's onEditScore function with the new delta
+      // The parent is responsible for updating the history state
+      onEditScore(historyIndex, teamIndex, delta);
     } else {
-      // Optionally, handle invalid input (e.g., show an error message)
       console.warn("Invalid score entered:", editedScore);
     }
-
-    // Exit editing mode
+    // Exit editing mode regardless of whether the input was valid
     setEditingCell(null);
     setEditedScore("");
   };
@@ -106,67 +113,74 @@ export const HistoryTable: React.FC<HistoryTableProps> = ({
             </tr>
           </thead>
           <tbody>
-            {history.map(
-              (
-                historyEntry,
-                historyIndex // Renamed index to historyIndex for clarity
-              ) => (
-                <tr
-                  key={historyIndex}
-                  className="odd:bg-background even:bg-muted/20"
-                >
-                  <td className="border border-border p-3 text-sm font-mono text-center">
-                    {historyIndex + 1}
-                  </td>
-                  {historyEntry.snapshot.map(
-                    (
-                      teamScoreEntry,
-                      teamIndex // Renamed index to teamIndex for clarity
-                    ) => (
-                      <td
-                        key={teamIndex}
-                        className="border border-border p-3 text-sm font-mono text-center cursor-pointer" // Added cursor-pointer to indicate interactivity
-                        onClick={() =>
-                          handleEditClick(
-                            historyIndex,
-                            teamIndex,
-                            teamScoreEntry.score
-                          )
-                        } // Add onClick to start editing
+            {history.map((historyEntry, historyIndex) => (
+              <tr
+                key={historyIndex}
+                className="odd:bg-background even:bg-muted/20"
+              >
+                <td className="border border-border p-3 text-sm font-mono text-center">
+                  {historyIndex + 1}
+                </td>
+                {/* Iterate through the snapshot array for team scores */}
+                {historyEntry.snapshot.map((teamScoreEntry, teamIndex) => (
+                  <td
+                    key={teamIndex}
+                    className="border border-border p-3 text-sm font-mono text-center cursor-pointer"
+                    onClick={() =>
+                      handleEditClick(
+                        historyIndex,
+                        teamIndex,
+                      )
+                    }
+                  >
+                    {/* Conditional rendering: show input if editing, otherwise show score */}
+                    {editingCell?.historyIndex === historyIndex &&
+                    editingCell?.teamIndex === teamIndex ? (
+                      <Input
+                        type="number"
+                        value={editedScore}
+                        onChange={handleInputChange}
+                        onKeyDown={(event) =>
+                          handleInputKeyDown(event, historyIndex, teamIndex)
+                        }
+                        onBlur={() => handleInputBlur(historyIndex, teamIndex)} // Save on blur
+                        autoFocus // Automatically focus the input when it appears
+                        className="w-16 h-8 text-center text-sm p-1"
+                      />
+                    ) : (
+                      <span
+                        className={`${
+                          historyEntry.changedTeamIndex === teamIndex
+                            ? "text-green-700 dark:text-green-400 font-bold"
+                            : "text-red-700 dark:text-red-400 font-bold"
+                        }`}
                       >
-                        {/* Conditional rendering: show input if editing, otherwise show score */}
-                        {editingCell?.historyIndex === historyIndex &&
-                        editingCell?.teamIndex === teamIndex ? (
-                          <Input
-                            type="number"
-                            value={editedScore}
-                            onChange={handleInputChange}
-                            onKeyDown={(event) =>
-                              handleInputKeyDown(event, historyIndex, teamIndex)
-                            }
-                            onBlur={() =>
-                              handleInputBlur(historyIndex, teamIndex)
-                            } // Save on blur
-                            autoFocus // Automatically focus the input when it appears
-                            className="w-16 h-8 text-center text-sm p-1" // Adjust styling as needed
-                          />
-                        ) : (
-                          <span
-                            className={`${
-                              historyEntry.changedTeamIndex === teamIndex
-                                ? "text-green-700 dark:text-green-400 font-bold"
-                                : "text-red-700 dark:text-red-400 font-bold" // This coloring might need adjustment based on the new edit functionality
-                            }`}
-                          >
-                            {teamScoreEntry.score}
-                          </span>
-                        )}
-                      </td>
-                    )
-                  )}
-                </tr>
-              )
-            )}
+                        {/* Calculate and display the score difference for this phase */}
+                        {(() => {
+                          const diff = getScoreDiff(history, historyIndex, teamIndex);
+                          return diff > 0 ? "+" + diff : diff;
+                        })()}
+                      </span>
+                    )}
+                  </td>
+                ))}
+              </tr>
+            ))}
+            {/* Row for displaying total scores */}
+            <tr className="bg-gray-200 dark:bg-gray-700 font-bold">
+              <td className="border border-border p-3 text-sm font-mono text-center">
+                Total
+              </td>
+              {/* Map through the calculated teamTotals */}
+              {teamTotals.map((total, teamIndex) => (
+                <td
+                  key={teamIndex}
+                  className="border border-border p-3 text-sm font-mono text-center"
+                >
+                  {total}
+                </td>
+              ))}
+            </tr>
           </tbody>
         </table>
       </div>
