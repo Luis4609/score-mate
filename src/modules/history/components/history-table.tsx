@@ -14,8 +14,7 @@ interface HistoryTableProps {
 }
 
 export const HistoryTable: React.FC<HistoryTableProps> = ({
-  history,
-  teams, // Current team list for headers
+  history,// Current team list for headers
   onEditScore,
 }) => {
   // State to manage which cell is being edited: { historyIndex, teamIndexInSnapshot }
