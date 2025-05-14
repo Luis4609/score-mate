@@ -1,12 +1,12 @@
-import React, { Suspense } from "react";
 import { GameAlert } from "@/components/game-alert";
 import { CardHeader } from "@/components/ui/card";
+import React, { Suspense } from "react";
 
+import { GameControls } from "@/modules/game/components/game-controls";
+import { GameSettings } from "@/modules/game/components/game-settings";
 import { useScoreMateGame } from "@/modules/game/hooks/useScoreGame";
 import { AddTeamForm } from "@/modules/teams/components/add-team-form";
-import { TeamsDisplay } from "@/modules/teams/components/team-display";
-import { GameSettings } from "@/modules/game/components/game-settings";
-import { GameControls } from "@/modules/game/components/game-controls";
+import { TeamsDisplay } from "@/modules/teams/components/TeamDisplay";
 
 const HistoryTable = React.lazy(() =>
   import("@/modules/history/components/history-table").then((module) => ({
@@ -26,7 +26,6 @@ function App() {
     setNewTeamName,
     setPointsToAdd,
     addTeam,
-    addScore,
     handleCustomPoints,
     restartGame,
     newGame,
@@ -58,7 +57,6 @@ function App() {
           teams={teams}
           pointsToAdd={pointsToAdd}
           setPointsToAdd={setPointsToAdd}
-          onAddScore={addScore}
           onHandleCustomPoints={handleCustomPoints}
           onRemoveTeam={removeTeam}
         />

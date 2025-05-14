@@ -1,50 +1,108 @@
-# React + TypeScript + Vite
+# Score Mate
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A web application to track and manage team scores across multiple phases of a game. Built with React, TypeScript, and Vite.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Features
 
-## Expanding the ESLint configuration
+- Add teams and record their scores for each phase.
+- Edit the score delta (points won) for any team in any phase.
+- Automatic recalculation of cumulative totals after editing.
+- Responsive and user-friendly interface.
+- History table showing phase-by-phase deltas and totals.
 
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
+---
 
-- Configure the top-level `parserOptions` property like this:
+## Getting Started
 
-```js
-export default tseslint.config({
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
-```
+### Prerequisites
 
-- Replace `tseslint.configs.recommended` to `tseslint.configs.recommendedTypeChecked` or `tseslint.configs.strictTypeChecked`
-- Optionally add `...tseslint.configs.stylisticTypeChecked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and update the config:
+- [Node.js](https://nodejs.org/) (v16 or higher recommended)
+- [npm](https://www.npmjs.com/) or [yarn](https://yarnpkg.com/)
 
-```js
-// eslint.config.js
-import react from 'eslint-plugin-react'
+### Installation
 
-export default tseslint.config({
-  // Set the react version
-  settings: { react: { version: '18.3' } },
-  plugins: {
-    // Add the react plugin
-    react,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended rules
-    ...react.configs.recommended.rules,
-    ...react.configs['jsx-runtime'].rules,
-  },
-})
-```
+1. **Clone the repository:**
+
+   ```bash
+   git clone https://github.com/your-username/score-mate.git
+   cd score-mate
+   ```
+
+2. **Install dependencies:**
+
+   Using npm:
+   ```bash
+   npm install
+   ```
+
+   Or using yarn:
+   ```bash
+   yarn install
+   ```
+
+3. **Start the development server:**
+
+   Using npm:
+   ```bash
+   npm run dev
+   ```
+
+   Or using yarn:
+   ```bash
+   yarn dev
+   ```
+
+4. **Open your browser and visit:**
+
+   ```
+   http://localhost:5173
+   ```
+
+---
+
+## Usage
+
+- **Add Teams:** Use the interface to add teams before starting a game.
+- **Record Scores:** For each phase, input the points each team has won.
+- **Edit Scores:** Click on any cell in the history table to edit the points won in that phase. The application will automatically recalculate totals.
+- **View Totals:** The last row of the table always shows the current total for each team.
+
+---
+
+## Project Structure
+src/
+components/ # Reusable UI components
+modules/
+history/
+components/ # History table and related components
+utils/ # Utility functions for score calculations
+lib/ # Type definitions and shared logic
+App.tsx # Main application component
+main.tsx # Entry point
+
+---
+
+## Customization
+
+- You can adjust the number of teams, phases, and scoring logic by modifying the relevant components and utility functions in `src/modules/history/`.
+- Styling is handled with Tailwind CSS (or your chosen framework).
+
+---
+
+## Contributing
+
+Pull requests are welcome! For major changes, please open an issue first to discuss what you would like to change.
+
+---
+
+## License
+
+[MIT](LICENSE)
+
+---
+
+## Contact
+
+For questions or support, open an issue or contact [your-email@example.com](mailto:your-email@example.com).
