@@ -4,7 +4,7 @@ import { CardHeader } from "@/components/ui/card";
 
 import { useScoreMateGame } from "@/modules/game/hooks/useScoreGame";
 import { AddTeamForm } from "@/modules/teams/components/add-team-form";
-import { TeamsDisplay } from "@/modules/teams/components/team-display";
+import { TeamsDisplay } from "@/modules/teams/components/TeamDisplay";
 import { GameSettings } from "@/modules/game/components/game-settings";
 import { GameControls } from "@/modules/game/components/game-controls";
 
