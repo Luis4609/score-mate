@@ -1,5 +1,6 @@
 // src/modules/game/hooks/useScoreGame.ts
 import {
+  ExportedGameData,
   GameAlertData,
   GameConfig,
   HistoryEntry,
@@ -33,7 +34,7 @@ export const useScoreMateGame = () => {
       setNewTeamName("");
       setHistory((prevHistory) => [
         ...prevHistory,
-        { snapshot: [...newTeams], changedTeamIndex: null },
+        { snapshot: [...newTeams], changedTeamIndex: null }, // phaseIdentifier will be undefined
       ]);
     } else if (teams.length >= gameConfig.maxTeams) {
       alert(
@@ -55,7 +56,7 @@ export const useScoreMateGame = () => {
         if (i === teamIndex) {
           if (newScore >= gameConfig.maxScore) {
             gameIsOver = true;
-            currentWinningTeam = { ...t, score: gameConfig.maxScore }; // Capture winning team details
+            currentWinningTeam = { ...t, score: gameConfig.maxScore };
             return { ...t, score: gameConfig.maxScore };
           }
           return { ...t, score: newScore };
@@ -63,12 +64,11 @@ export const useScoreMateGame = () => {
         return t;
       });
 
-      // If not already game over by this team, check if any other team is also at max score
       if (!gameIsOver) {
         for (const t of updatedTeams) {
           if (t.score >= gameConfig.maxScore) {
             gameIsOver = true;
-            currentWinningTeam = t; // Prioritize the team that just scored if multiple hit max simultaneously
+            currentWinningTeam = t;
             break;
           }
         }
@@ -77,7 +77,7 @@ export const useScoreMateGame = () => {
       setTeams(updatedTeams);
       setHistory((prevHistory) => [
         ...prevHistory,
-        { snapshot: updatedTeams, changedTeamIndex: teamIndex },
+        { snapshot: updatedTeams, changedTeamIndex: teamIndex }, // phaseIdentifier will be undefined
       ]);
 
       if (gameIsOver && currentWinningTeam) {
@@ -116,7 +116,7 @@ export const useScoreMateGame = () => {
     if (teamsWithResetScores.length > 0) {
       setHistory((prevHistory) => [
         ...prevHistory,
-        { snapshot: teamsWithResetScores, changedTeamIndex: null },
+        { snapshot: teamsWithResetScores, changedTeamIndex: null }, // phaseIdentifier will be undefined
       ]);
     }
   }, [teams]);
@@ -143,7 +143,7 @@ export const useScoreMateGame = () => {
         const newHistory = prevHistory
           .slice(0, historyIndex + 1)
           .map((entry) => ({
-            ...entry,
+            ...entry, // Preserves phaseIdentifier
             snapshot: entry.snapshot.map((team) => ({ ...team })),
           }));
 
@@ -193,25 +193,22 @@ export const useScoreMateGame = () => {
           newHistory.push({
             snapshot: nextSnapshot,
             changedTeamIndex: originalFollowingEntry.changedTeamIndex,
+            phaseIdentifier: originalFollowingEntry.phaseIdentifier, // Preserve phaseIdentifier
           });
           currentTeamsState = [...nextSnapshot.map((team) => ({ ...team }))];
         }
         setTeams(currentTeamsState);
 
         let gameIsOver = false;
-        let finalWinningTeam: Team = {
-          name: "",
-          score: 0,
-        };
+        let finalWinningTeam: Team = { name: "", score: 0 };
         currentTeamsState.forEach((team) => {
           if (team.score >= gameConfig.maxScore) {
             gameIsOver = true;
-            finalWinningTeam = team; // In case of multiple, last one checked wins here. Could be refined.
+            finalWinningTeam = team;
           }
         });
 
-        if (gameIsOver && finalWinningTeam) {
-          // Added check for finalWinningTeam
+        if (gameIsOver && finalWinningTeam.name) {
           setGameAlert({
             title: "GAME OVER!",
             description: `${finalWinningTeam.name} has reached the maximum score of ${gameConfig.maxScore}.`,
@@ -261,15 +258,13 @@ export const useScoreMateGame = () => {
             return {
               snapshot: updatedSnapshot,
               changedTeamIndex: updatedChangedTeamIndex,
+              phaseIdentifier: entry.phaseIdentifier, // Preserve phaseIdentifier
             };
           })
-          .filter((entry) => entry.snapshot.length > 0);
+          .filter((entry) => entry.snapshot.length > 0 || entry.phaseIdentifier !== undefined); // Keep entries if they are phase markers even if no teams
 
         let gameIsOver = false;
-        let finalWinningTeam: Team = {
-          name: "",
-          score: 0,
-        };
+        let finalWinningTeam: Team = { name: "", score: 0,};
         if (updatedTeams.length > 0) {
           updatedTeams.forEach((team) => {
             if (team.score >= gameConfig.maxScore) {
@@ -279,8 +274,7 @@ export const useScoreMateGame = () => {
           });
         }
 
-        if (gameIsOver && finalWinningTeam) {
-          // Added check for finalWinningTeam
+        if (gameIsOver && finalWinningTeam.name) {
           setGameAlert({
             title: "GAME OVER!",
             description: `${finalWinningTeam.name} has reached the maximum score of ${gameConfig.maxScore}.`,
@@ -296,6 +290,74 @@ export const useScoreMateGame = () => {
     [teams, gameConfig.maxScore]
   );
 
+  const editPhaseIdentifierInHistory = useCallback(
+    (historyIndex: number, newPhaseName: string) => {
+      setHistory(prevHistory =>
+        prevHistory.map((entry, index) => {
+          if (index === historyIndex) {
+            return {
+              ...entry,
+              phaseIdentifier: newPhaseName.trim() === "" ? undefined : newPhaseName.trim(),
+            };
+          }
+          return entry;
+        })
+      );
+    },
+    []
+  );
+
+  const exportGameData = useCallback((): string => {
+    const dataToExport: ExportedGameData = {
+      gameConfigValue: gameConfig.value,
+      teams: teams,
+      history: history,
+      gameVersion: "1.0",
+    };
+    return JSON.stringify(dataToExport, null, 2);
+  }, [gameConfig, teams, history]);
+
+  const importGameData = useCallback((jsonDataString: string): boolean => {
+    try {
+      const importedData = JSON.parse(jsonDataString) as ExportedGameData;
+
+      if (typeof importedData !== 'object' || importedData === null) throw new Error("Invalid data format.");
+      if (importedData.gameVersion !== "1.0") {
+        alert("Warning: Importing data from a different game version. Compatibility issues may occur.");
+      }
+      if (!importedData.gameConfigValue || typeof importedData.gameConfigValue !== 'string' ||
+          !Array.isArray(importedData.teams) || !Array.isArray(importedData.history)) {
+        throw new Error("Missing critical data fields.");
+      }
+
+      const foundGameConfig = gameConfigs.find(config => config.value === importedData.gameConfigValue);
+      if (!foundGameConfig) {
+        throw new Error(`Game configuration "${importedData.gameConfigValue}" not found.`);
+      }
+
+      if (importedData.teams.some(t => typeof t.name !== 'string' || typeof t.score !== 'number')) {
+        throw new Error("Invalid team data in imported file.");
+      }
+      // Check phaseIdentifier validity: if present, must be string or undefined.
+      if (importedData.history.some(h => !Array.isArray(h.snapshot) || 
+                                          (h.changedTeamIndex !== null && typeof h.changedTeamIndex !== 'number') ||
+                                          ('phaseIdentifier' in h && typeof h.phaseIdentifier !== 'string' && h.phaseIdentifier !== undefined))) {
+          throw new Error("Invalid history data (e.g. phaseIdentifier) in imported file.");
+      }
+
+      setGameConfig(foundGameConfig);
+      setTeams(importedData.teams);
+      setHistory(importedData.history);
+      setGameAlert(null);
+      setNewTeamName("");
+      setPointsToAdd({});
+      return true;
+    } catch (error) {
+      alert(`Failed to import game data: ${error instanceof Error ? error.message : String(error)}`);
+      return false;
+    }
+  }, [setGameConfig, setTeams, setHistory, setGameAlert, setNewTeamName, setPointsToAdd]);
+
   return {
     gameConfig,
     teams,
@@ -307,11 +369,14 @@ export const useScoreMateGame = () => {
     setNewTeamName,
     setPointsToAdd,
     addTeam,
-    addScore, // Exporting addScore as it might be used by TeamScoreCard for fixed points
+    addScore,
     handleCustomPoints,
     restartGame,
     newGame,
     editScoreInHistory,
     removeTeam,
+    exportGameData,
+    importGameData,
+    editPhaseIdentifierInHistory,
   };
 };

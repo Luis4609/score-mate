@@ -31,6 +31,8 @@ function App() {
     newGame,
     editScoreInHistory,
     removeTeam,
+    exportGameData,
+    importGameData,
   } = useScoreMateGame();
 
   const canAddTeam =
@@ -45,7 +47,12 @@ function App() {
         {/* TODO: check better layout */}
         <div className="flex flex-row md:flex-row gap-4 w-full">
           <GameSettings setGameConfig={setGameConfig} />{" "}
-          <GameControls onRestartGame={restartGame} onNewGame={newGame} />{" "}
+          <GameControls
+            onRestartGame={restartGame}
+            onNewGame={newGame}
+            onExportGame={exportGameData}
+            onImportGame={importGameData}
+          />{" "}
         </div>
         <AddTeamForm
           newTeamName={newTeamName}

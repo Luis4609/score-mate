@@ -34,4 +34,13 @@ export interface GameConfig {
 export interface HistoryEntry {
   snapshot: Team[]; // A snapshot of all teams and their scores at this point in history
   changedTeamIndex: number | null; // Index of the team whose score changed to create this entry, or null if it's an initial state or reset
+  phaseIdentifier?: string; // Optional identifier for the phase of the game
+}
+
+// Interface for exported game data
+export interface ExportedGameData {
+  gameConfigValue: string;
+  teams: Team[];
+  history: HistoryEntry[];
+  gameVersion: string;
 }
