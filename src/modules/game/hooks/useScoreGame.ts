@@ -26,7 +26,7 @@ export const useScoreMateGame = () => {
   }, [gameConfig]);
 
   const addTeam = useCallback(() => {
-    if (newTeamName.trim() !== "" && teams.length < gameConfig.maxTeams) {
+    if (newTeamName.trim() !== "" && teams.length < gameConfig.maxPlayers) {
       const newTeamEntry: Team = { name: newTeamName.trim(), score: 0 };
       const newTeams = [...teams, newTeamEntry];
       setTeams(newTeams);
@@ -35,12 +35,12 @@ export const useScoreMateGame = () => {
         ...prevHistory,
         { snapshot: [...newTeams], changedTeamIndex: null },
       ]);
-    } else if (teams.length >= gameConfig.maxTeams) {
+    } else if (teams.length >= gameConfig.maxPlayers) {
       alert(
-        `You cannot add more than ${gameConfig.maxTeams} teams for ${gameConfig.name}.`
+        `No puedes añadir más de ${gameConfig.maxPlayers} equipos para ${gameConfig.name}.`
       );
     }
-  }, [newTeamName, teams, gameConfig.maxTeams, gameConfig.name]);
+  }, [newTeamName, teams, gameConfig.maxPlayers, gameConfig.name]);
 
   const addScore = useCallback(
     (teamIndex: number, points: number) => {
@@ -53,10 +53,10 @@ export const useScoreMateGame = () => {
 
       const updatedTeams = teams.map((t, i) => {
         if (i === teamIndex) {
-          if (newScore >= gameConfig.maxScore) {
+          if (newScore >= gameConfig.defaultMaxScore) {
             gameIsOver = true;
-            currentWinningTeam = { ...t, score: gameConfig.maxScore }; // Capture winning team details
-            return { ...t, score: gameConfig.maxScore };
+            currentWinningTeam = { ...t, score: gameConfig.defaultMaxScore }; // Capture winning team details
+            return { ...t, score: gameConfig.defaultMaxScore };
           }
           return { ...t, score: newScore };
         }
@@ -66,7 +66,7 @@ export const useScoreMateGame = () => {
       // If not already game over by this team, check if any other team is also at max score
       if (!gameIsOver) {
         for (const t of updatedTeams) {
-          if (t.score >= gameConfig.maxScore) {
+          if (t.score >= gameConfig.defaultMaxScore) {
             gameIsOver = true;
             currentWinningTeam = t; // Prioritize the team that just scored if multiple hit max simultaneously
             break;
@@ -82,8 +82,8 @@ export const useScoreMateGame = () => {
 
       if (gameIsOver && currentWinningTeam) {
         setGameAlert({
-          title: "GAME OVER!",
-          description: `${currentWinningTeam.name} has reached the maximum score of ${gameConfig.maxScore}.`,
+          title: "¡FIN DE LA PARTIDA!",
+          description: `¡El equipo ${currentWinningTeam.name} ha alcanzado la puntuación máxima de ${gameConfig.defaultMaxScore}!`,
           variant: "destructive",
           winningTeamName: currentWinningTeam.name,
         });
@@ -91,7 +91,7 @@ export const useScoreMateGame = () => {
         setGameAlert(null);
       }
     },
-    [teams, gameConfig.maxScore, gameConfig.name]
+    [teams, gameConfig.defaultMaxScore]
   );
 
   const handleCustomPoints = useCallback(
@@ -138,7 +138,7 @@ export const useScoreMateGame = () => {
       setHistory((prevHistory) => {
         const validatedNewScore = Math.max(
           0,
-          Math.min(newScoreValue, gameConfig.maxScore)
+          Math.min(newScoreValue, gameConfig.defaultMaxScore)
         );
         const newHistory = prevHistory
           .slice(0, historyIndex + 1)
@@ -185,7 +185,7 @@ export const useScoreMateGame = () => {
                   0) + pointsDelta;
               newCalculatedScore = Math.max(
                 0,
-                Math.min(newCalculatedScore, gameConfig.maxScore)
+                Math.min(newCalculatedScore, gameConfig.defaultMaxScore)
               );
               nextSnapshot[teamThatChangedIndex].score = newCalculatedScore;
             }
@@ -204,7 +204,7 @@ export const useScoreMateGame = () => {
           score: 0,
         };
         currentTeamsState.forEach((team) => {
-          if (team.score >= gameConfig.maxScore) {
+          if (team.score >= gameConfig.defaultMaxScore) {
             gameIsOver = true;
             finalWinningTeam = team; // In case of multiple, last one checked wins here. Could be refined.
           }
@@ -213,8 +213,8 @@ export const useScoreMateGame = () => {
         if (gameIsOver && finalWinningTeam) {
           // Added check for finalWinningTeam
           setGameAlert({
-            title: "GAME OVER!",
-            description: `${finalWinningTeam.name} has reached the maximum score of ${gameConfig.maxScore}.`,
+            title: "¡FIN DE LA PARTIDA!",
+            description: `¡El equipo ${finalWinningTeam.name} ha alcanzado la puntuación máxima de ${gameConfig.defaultMaxScore}!`,
             variant: "destructive",
             winningTeamName: finalWinningTeam.name,
           });
@@ -224,7 +224,7 @@ export const useScoreMateGame = () => {
         return newHistory;
       });
     },
-    [gameConfig.maxScore]
+    [gameConfig.defaultMaxScore]
   );
 
   const removeTeam = useCallback(
@@ -272,7 +272,7 @@ export const useScoreMateGame = () => {
         };
         if (updatedTeams.length > 0) {
           updatedTeams.forEach((team) => {
-            if (team.score >= gameConfig.maxScore) {
+            if (team.score >= gameConfig.defaultMaxScore) {
               gameIsOver = true;
               finalWinningTeam = team;
             }
@@ -282,8 +282,8 @@ export const useScoreMateGame = () => {
         if (gameIsOver && finalWinningTeam) {
           // Added check for finalWinningTeam
           setGameAlert({
-            title: "GAME OVER!",
-            description: `${finalWinningTeam.name} has reached the maximum score of ${gameConfig.maxScore}.`,
+            title: "¡FIN DE LA PARTIDA!",
+            description: `¡El equipo ${finalWinningTeam.name} ha alcanzado la puntuación máxima de ${gameConfig.defaultMaxScore}!`,
             variant: "destructive",
             winningTeamName: finalWinningTeam.name,
           });
@@ -293,7 +293,7 @@ export const useScoreMateGame = () => {
         return newHistory;
       });
     },
-    [teams, gameConfig.maxScore]
+    [teams, gameConfig.defaultMaxScore]
   );
 
   return {

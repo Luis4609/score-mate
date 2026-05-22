@@ -1,23 +1,22 @@
-// src/modules/history/components/history-table.tsx
 import React, { useState } from "react";
 import { Input } from "@/components/ui/input";
-import { HistoryEntry, Team } from "@/lib/types"; // Assuming Team is also needed for context, e.g. team names
+import { HistoryEntry, Team } from "@/lib/types";
 
 interface HistoryTableProps {
   history: HistoryEntry[];
-  teams: Team[]; // Current teams, used for table headers
+  teams: Team[]; // Current teams
   onEditScore: (
     historyIndex: number,
-    teamIndexInSnapshot: number, // Clarified name
+    teamIndexInSnapshot: number,
     newScore: number
   ) => void;
 }
 
 export const HistoryTable: React.FC<HistoryTableProps> = ({
-  history,// Current team list for headers
+  history,
   onEditScore,
 }) => {
-  // State to manage which cell is being edited: { historyIndex, teamIndexInSnapshot }
+  // State to manage which cell is being edited
   const [editingCell, setEditingCell] = useState<{
     historyIndex: number;
     teamIndexInSnapshot: number;
@@ -26,7 +25,7 @@ export const HistoryTable: React.FC<HistoryTableProps> = ({
   const [editedScore, setEditedScore] = useState<string>("");
 
   if (history.length === 0) {
-    return null; // Don't render anything if history is empty
+    return null;
   }
 
   // Function to start editing a cell
@@ -75,85 +74,92 @@ export const HistoryTable: React.FC<HistoryTableProps> = ({
     handleSaveEdit(historyIndex, teamIndexInSnapshot);
   };
 
+  // Helper to calculate delta and styles
+  const getScoreChangeDetails = (historyEntry: HistoryEntry, historyIndex: number, teamIndexInSnapshot: number) => {
+    const currentScore = historyEntry.snapshot[teamIndexInSnapshot]?.score ?? 0;
+    const previousHistoryEntry = historyIndex > 0 ? history[historyIndex - 1] : null;
+    const previousTeamScoreEntry = previousHistoryEntry?.snapshot[teamIndexInSnapshot];
+
+    let diff = 0;
+    let cellStyle = "";
+    let hasChange = false;
+
+    if (historyEntry.changedTeamIndex === teamIndexInSnapshot) {
+      hasChange = true;
+      if (previousTeamScoreEntry !== undefined && previousTeamScoreEntry !== null) {
+        diff = currentScore - previousTeamScoreEntry.score;
+        if (diff > 0) {
+          cellStyle = "text-green-600 dark:text-green-400 font-bold";
+        } else if (diff < 0) {
+          cellStyle = "text-red-600 dark:text-red-400 font-bold";
+        } else {
+          cellStyle = "font-bold";
+        }
+      } else {
+        diff = currentScore;
+        cellStyle = "text-blue-600 dark:text-blue-400 font-bold";
+      }
+    } else if (historyEntry.changedTeamIndex === null && historyIndex > 0) {
+      if (previousTeamScoreEntry !== undefined && previousTeamScoreEntry !== null) {
+        diff = currentScore - previousTeamScoreEntry.score;
+        if (diff !== 0) {
+          hasChange = true;
+          if (diff > 0) {
+            cellStyle = "text-green-500";
+          } else {
+            cellStyle = "text-red-500";
+          }
+        }
+      } else if (currentScore > 0) {
+        hasChange = true;
+        diff = currentScore;
+        cellStyle = "text-blue-500";
+      }
+    }
+
+    return { diff, cellStyle, hasChange, currentScore };
+  };
+
   return (
-    <div className="flex w-full max-w-sm md:max-w-md flex-col gap-2 mt-6">
-      <h2 className="text-lg font-semibold text-center">Game History</h2>
-      <div className="overflow-x-auto rounded-md border border-border">
+    <div className="w-full">
+      {/* DESKTOP TABLE VIEW */}
+      <div className="hidden md:block overflow-x-auto rounded-xl border border-border bg-card shadow-sm">
         <table className="w-full border-collapse">
           <thead>
-            <tr className="bg-muted/50">
-              <th className="border border-border p-3 text-left text-sm font-medium text-muted-foreground sticky left-0 bg-muted/50 z-10">
-                Round
+            <tr className="bg-muted/50 border-b border-border">
+              <th className="p-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider w-16">
+                Ronda
               </th>
-              {/* Render headers based on the current 'teams' prop */}
-              {/* This assumes the number of columns should match the current number of teams */}
-              {/* And that history snapshots will be mapped to these columns by name or a stable ID if available */}
-              {/* For simplicity, if a team from current `teams` is not in a historical snapshot, its cell will be empty. */}
-              {/* Or, if snapshots can have varying teams, headers might need to be dynamic or based on all teams ever present. */}
-              {/* The original code used historyEntry.snapshot to determine columns per row, this version uses current `teams` for consistent column headers. */}
-              {/* Let's revert to snapshot-based columns for data rows to match `useScoreGame`'s history structure. */}
               {history[0]?.snapshot.map((teamInSnapshot, index) => (
-                 <th
-                  key={`header-${teamInSnapshot.name}-${index}`} // Use name for more stable key if names are unique
-                  className="border border-border p-3 text-left text-sm font-medium text-muted-foreground"
+                <th
+                  key={`header-${teamInSnapshot.name}-${index}`}
+                  className="p-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider"
                 >
-                  {teamInSnapshot.name} {/* Display name from the first snapshot's structure */}
+                  {teamInSnapshot.name}
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-border">
             {history.map((historyEntry, historyIndex) => (
               <tr
                 key={historyIndex}
-                className="odd:bg-background even:bg-muted/20"
+                className="hover:bg-muted/20 transition-colors"
               >
-                <td className="border border-border p-3 text-sm font-mono text-center sticky left-0 bg-inherit z-0">
+                <td className="p-3 text-center text-sm font-mono text-muted-foreground font-semibold bg-muted/10">
                   {historyIndex + 1}
                 </td>
                 {historyEntry.snapshot.map((teamScoreEntry, teamIndexInSnapshot) => {
-                  const currentScore = teamScoreEntry.score;
-                  let cellStyle = "";
-
-                  // Determine if this cell was the one that changed in this history entry
-                  if (historyEntry.changedTeamIndex === teamIndexInSnapshot) {
-                    const previousHistoryEntry = historyIndex > 0 ? history[historyIndex - 1] : null;
-                    const previousTeamScoreEntry = previousHistoryEntry?.snapshot[teamIndexInSnapshot];
-
-                    if (previousTeamScoreEntry !== undefined && previousTeamScoreEntry !== null) {
-                      if (currentScore > previousTeamScoreEntry.score) {
-                        cellStyle = "text-green-600 dark:text-green-400 font-bold";
-                      } else if (currentScore < previousTeamScoreEntry.score) {
-                        cellStyle = "text-red-600 dark:text-red-400 font-bold";
-                      } else {
-                        cellStyle = "font-bold"; // Score changed but is the same (e.g. edit, or capped)
-                      }
-                    } else {
-                      // Team score changed, but no direct previous score at this index (e.g. team just added, or history structure changed)
-                      // or it's the first entry for this team's score column
-                      cellStyle = "text-blue-600 dark:text-blue-400 font-bold"; // Style for new scores or first appearance
-                    }
-                  } else if (historyEntry.changedTeamIndex === null && historyIndex > 0) {
-                    // This entry was due to a reset or team addition/removal, not a specific score change by index.
-                    // Compare with previous state if possible.
-                     const previousHistoryEntry = history[historyIndex - 1];
-                     const previousTeamScoreEntry = previousHistoryEntry?.snapshot[teamIndexInSnapshot];
-                     if (previousTeamScoreEntry !== undefined && previousTeamScoreEntry !== null) {
-                        if (currentScore > previousTeamScoreEntry.score) {
-                            cellStyle = "text-green-500"; // More subtle green
-                        } else if (currentScore < previousTeamScoreEntry.score) {
-                            cellStyle = "text-red-500"; // More subtle red
-                        }
-                     } else if (currentScore > 0) { // New team in this snapshot row with a score
-                        cellStyle = "text-blue-500";
-                     }
-                  }
-
+                  const { cellStyle, currentScore } = getScoreChangeDetails(
+                    historyEntry,
+                    historyIndex,
+                    teamIndexInSnapshot
+                  );
 
                   return (
                     <td
                       key={`${historyIndex}-${teamIndexInSnapshot}-${teamScoreEntry.name}`}
-                      className="border border-border p-3 text-sm font-mono text-center cursor-pointer"
+                      className="p-3 text-sm font-mono cursor-pointer hover:bg-primary/5 transition-colors"
                       onClick={() =>
                         handleEditClick(
                           historyIndex,
@@ -162,24 +168,26 @@ export const HistoryTable: React.FC<HistoryTableProps> = ({
                         )
                       }
                     >
-                      {editingCell?.historyIndex === historyIndex &&
-                      editingCell?.teamIndexInSnapshot === teamIndexInSnapshot ? (
-                        <Input
-                          type="number"
-                          value={editedScore}
-                          onChange={handleInputChange}
-                          onKeyDown={(event) =>
-                            handleInputKeyDown(event, historyIndex, teamIndexInSnapshot)
-                          }
-                          onBlur={() => handleInputBlur(historyIndex, teamIndexInSnapshot)}
-                          autoFocus
-                          className="w-16 h-8 text-center text-sm p-1 bg-background" // Ensure input is visible
-                        />
-                      ) : (
-                        <span className={cellStyle}>
-                          {currentScore}
-                        </span>
-                      )}
+                      <div className="min-h-[2rem] flex items-center justify-start">
+                        {editingCell?.historyIndex === historyIndex &&
+                        editingCell?.teamIndexInSnapshot === teamIndexInSnapshot ? (
+                          <Input
+                            type="number"
+                            value={editedScore}
+                            onChange={handleInputChange}
+                            onKeyDown={(event) =>
+                              handleInputKeyDown(event, historyIndex, teamIndexInSnapshot)
+                            }
+                            onBlur={() => handleInputBlur(historyIndex, teamIndexInSnapshot)}
+                            autoFocus
+                            className="w-20 h-8 text-center text-sm px-1 py-0.5 bg-background border-primary focus-visible:ring-primary"
+                          />
+                        ) : (
+                          <span className={cellStyle}>
+                            {currentScore}
+                          </span>
+                        )}
+                      </div>
                     </td>
                   );
                 })}
@@ -187,6 +195,94 @@ export const HistoryTable: React.FC<HistoryTableProps> = ({
             ))}
           </tbody>
         </table>
+      </div>
+
+      {/* MOBILE TIMELINE CARDS VIEW */}
+      <div className="md:hidden relative pl-6 border-l-2 border-primary/20 space-y-6 py-2 ml-4">
+        {history.map((historyEntry, historyIndex) => (
+          <div key={historyIndex} className="relative">
+            {/* Timeline dot */}
+            <div className="absolute -left-[33px] top-3.5 w-4 h-4 rounded-full border-4 border-background bg-primary shadow-sm" />
+
+            {/* Round Card */}
+            <div className="bg-card border border-border/80 rounded-2xl p-4 shadow-sm space-y-3 hover:border-primary/40 transition-all">
+              {/* Header: Round Name */}
+              <div className="flex items-center justify-between pb-2 border-b border-muted">
+                <span className="font-bold text-sm text-primary">
+                  Ronda {historyIndex + 1}
+                </span>
+                <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+                  Toca puntuación para editar
+                </span>
+              </div>
+
+              {/* Teams & Scores */}
+              <div className="space-y-2.5">
+                {historyEntry.snapshot.map((teamScoreEntry, teamIndexInSnapshot) => {
+                  const { diff, cellStyle, hasChange, currentScore } = getScoreChangeDetails(
+                    historyEntry,
+                    historyIndex,
+                    teamIndexInSnapshot
+                  );
+
+                  return (
+                    <div
+                      key={`${historyIndex}-${teamIndexInSnapshot}-${teamScoreEntry.name}`}
+                      className="flex items-center justify-between py-1"
+                    >
+                      <span className="text-sm font-medium text-foreground">
+                        {teamScoreEntry.name}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        {/* Points added/subtracted bubble */}
+                        {hasChange && diff !== 0 && (
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold shadow-sm ${
+                            diff > 0 
+                              ? "bg-green-500/10 text-green-600 dark:text-green-400" 
+                              : "bg-red-500/10 text-red-600 dark:text-red-400"
+                          }`}>
+                            {diff > 0 ? `+${diff}` : diff}
+                          </span>
+                        )}
+
+                        {/* Interactive score button/input */}
+                        <div
+                          onClick={() =>
+                            handleEditClick(
+                              historyIndex,
+                              teamIndexInSnapshot,
+                              currentScore
+                            )
+                          }
+                          className="min-w-[2.5rem] flex justify-end"
+                        >
+                          {editingCell?.historyIndex === historyIndex &&
+                          editingCell?.teamIndexInSnapshot === teamIndexInSnapshot ? (
+                            <Input
+                              type="number"
+                              value={editedScore}
+                              onChange={handleInputChange}
+                              onKeyDown={(event) =>
+                                handleInputKeyDown(event, historyIndex, teamIndexInSnapshot)
+                              }
+                              onBlur={() => handleInputBlur(historyIndex, teamIndexInSnapshot)}
+                              autoFocus
+                              className="w-16 h-7 text-center text-xs p-1 bg-background border-primary"
+                            />
+                          ) : (
+                            <button className={`font-mono text-sm font-bold bg-muted/50 hover:bg-muted text-foreground px-2 py-1 rounded-lg border border-border/40 transition-colors ${cellStyle}`}>
+                              {currentScore}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
