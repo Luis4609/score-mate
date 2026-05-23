@@ -6,6 +6,7 @@ export interface GameAlertData {
   description: string;
   variant: "default" | "destructive";
   winningTeamName?: string; // Optional: to display the name of the winning team
+  triggeringTeamName?: string; // Optional: to display the name of the team that triggered the limit
 }
 
 // Represents a team/participant with a name and score
@@ -30,6 +31,7 @@ export interface GameConfig {
   defaultMaxScore: number;
   minPlayers: number;
   maxPlayers: number;
+  isCustom?: boolean; // Indicates if this is a user-created custom preset
 }
 
 // Represents an entry in the game's history, capturing a snapshot of team scores

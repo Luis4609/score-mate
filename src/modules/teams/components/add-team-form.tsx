@@ -27,13 +27,13 @@ export const AddTeamForm: React.FC<AddTeamFormProps> = ({
     <div className="flex w-full max-w-sm flex-row gap-6 items-center justify-center">
       <Input
         type="text"
-        placeholder="Team name"
+        placeholder="Nombre del equipo"
         value={newTeamName}
         onChange={(e) => setNewTeamName(e.target.value)}
         onKeyDown={handleKeyPress}
       />
       <Button onClick={onAddTeam} disabled={!canAddTeam}>
-        Add team
+        Añadir equipo
       </Button>
     </div>
   );

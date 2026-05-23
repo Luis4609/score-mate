@@ -70,9 +70,9 @@ const TeamScoreCard: React.FC<TeamScoreCardProps> = ({
               variant="secondary"
               className="h-9 px-3 text-xs font-semibold rounded-xl hover:bg-primary hover:text-primary-foreground transition-all duration-200"
               onClick={() => onHandleCustomPoints(teamIndex)}
-              aria-label={`Add points to team ${team.name}`}
+              aria-label={`Añadir puntos al equipo ${team.name}`}
             >
-              Add
+              Añadir
             </Button>
             <Button
               size="icon"

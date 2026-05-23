@@ -8,6 +8,7 @@ import { GameSettingsDrawer } from "@/modules/game/components/game-settings-draw
 import { useScoreMateGame } from "@/modules/game/hooks/useScoreGame";
 import { AddTeamForm } from "@/modules/teams/components/add-team-form";
 import { TeamsDisplay } from "@/modules/teams/components/TeamDisplay";
+import { ScoreProgressionChart } from "@/modules/history/components/ScoreProgressionChart";
 
 const HistoryTable = React.lazy(() =>
   import("@/modules/history/components/history-table").then((module) => ({
@@ -18,6 +19,7 @@ const HistoryTable = React.lazy(() =>
 function App() {
   const {
     gameConfig,
+    allConfigs,
     teams,
     newTeamName,
     pointsToAdd,
@@ -32,9 +34,12 @@ function App() {
     newGame,
     editScoreInHistory,
     removeTeam,
+    saveCustomPreset,
+    deleteCustomPreset,
   } = useScoreMateGame();
 
   const [activeTab, setActiveTab] = React.useState<'game' | 'history'>('game');
+  const [historyView, setHistoryView] = React.useState<'table' | 'chart'>('table');
 
   const canAddTeam =
     newTeamName.trim() !== "" && teams.length < gameConfig.maxPlayers;
@@ -79,21 +84,24 @@ function App() {
                 <div className="flex flex-col min-w-0">
                   <div className="flex items-center gap-1.5">
                     <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Juego</span>
-                    <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-primary/10 text-primary uppercase">
+                    <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-primary/10 text-primary uppercase truncate max-w-[120px]">
                       {gameConfig.name || "Libre"}
                     </span>
                   </div>
                   <span className="text-xs text-muted-foreground mt-0.5 truncate">
                     Límite: {gameConfig.defaultMaxScore ? `${gameConfig.defaultMaxScore} pts` : "Sin límite"}
-                    {gameConfig.maxPlayers && ` • Máx. ${gameConfig.maxPlayers} jug.`}
+                    {gameConfig.maxPlayers && ` • Máx. {gameConfig.maxPlayers} jug.`}
                   </span>
                 </div>
               </div>
               <GameSettingsDrawer
                 gameConfig={gameConfig}
+                allConfigs={allConfigs}
                 setGameConfig={setGameConfig}
                 onRestartGame={restartGame}
                 onNewGame={newGame}
+                onSaveCustomPreset={saveCustomPreset}
+                onDeleteCustomPreset={deleteCustomPreset}
               />
             </div>
 
@@ -141,44 +149,84 @@ function App() {
           {/* Right Column: Game History */}
           <div className={`md:col-span-7 flex-col gap-6 w-full ${activeTab === 'history' ? 'flex' : 'hidden md:flex'}`}>
             
-            {/* History Table Container */}
+            {/* History Table/Chart Container */}
             <Card className="shadow-md border-muted overflow-hidden">
               <CardHeader className="pb-2">
-                <CardTitle className="text-lg font-semibold flex items-center gap-2">
-                  <HistoryIcon className="h-5 w-5 text-primary" />
-                  Historial de Rondas
-                </CardTitle>
-                <CardDescription>
-                  Haz clic en cualquier celda para editar el puntaje de esa ronda.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="p-0">
-                <Suspense
-                  fallback={
-                    <div className="p-6 text-center text-sm text-muted-foreground flex justify-center items-center gap-2">
-                      <span className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent" />
-                      Cargando historial...
-                    </div>
-                  }
-                >
-                  {history.length > 0 ? (
-                    <div className="px-6 pb-6">
-                      <HistoryTable
-                        history={history}
-                        teams={teams}
-                        onEditScore={editScoreInHistory}
-                      />
-                    </div>
-                  ) : (
-                    <div className="text-center py-16 px-6 flex flex-col items-center justify-center gap-3 text-muted-foreground">
-                      <HistoryIcon className="h-12 w-12 opacity-30 animate-pulse" />
-                      <h3 className="font-medium text-foreground">Sin rondas registradas</h3>
-                      <p className="text-sm max-w-xs">
-                        Comienza a añadir puntos a los equipos para ver el historial y la progresión de la partida en tiempo real.
-                      </p>
+                <div className="flex flex-row items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                      <HistoryIcon className="h-5 w-5 text-primary" />
+                      Historial de Rondas
+                    </CardTitle>
+                    <CardDescription className="text-xs sm:text-sm">
+                      {historyView === 'table' 
+                        ? "Haz clic en cualquier celda para editar el puntaje de esa ronda."
+                        : "Visualiza la evolución de los puntajes ronda tras ronda."
+                      }
+                    </CardDescription>
+                  </div>
+                  {history.length > 0 && (
+                    <div className="flex items-center gap-1 bg-muted p-1 rounded-xl shrink-0">
+                      <button
+                        onClick={() => setHistoryView('table')}
+                        className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                          historyView === 'table' 
+                            ? 'bg-card text-primary shadow-sm' 
+                            : 'text-muted-foreground hover:text-foreground'
+                        }`}
+                      >
+                        Tabla
+                      </button>
+                      <button
+                        onClick={() => setHistoryView('chart')}
+                        className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                          historyView === 'chart' 
+                            ? 'bg-card text-primary shadow-sm' 
+                            : 'text-muted-foreground hover:text-foreground'
+                        }`}
+                      >
+                        Gráfico
+                      </button>
                     </div>
                   )}
-                </Suspense>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                {history.length > 0 ? (
+                  <div className="px-6 pb-6">
+                    {historyView === 'table' ? (
+                      <Suspense
+                        fallback={
+                          <div className="p-6 text-center text-sm text-muted-foreground flex justify-center items-center gap-2">
+                            <span className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent" />
+                            Cargando historial...
+                          </div>
+                        }
+                      >
+                        <HistoryTable
+                          history={history}
+                          teams={teams}
+                          onEditScore={editScoreInHistory}
+                        />
+                      </Suspense>
+                    ) : (
+                      <div className="pt-2">
+                        <ScoreProgressionChart
+                          history={history}
+                          teams={teams}
+                        />
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-center py-16 px-6 flex flex-col items-center justify-center gap-3 text-muted-foreground">
+                    <HistoryIcon className="h-12 w-12 opacity-30 animate-pulse" />
+                    <h3 className="font-medium text-foreground">Sin rondas registradas</h3>
+                    <p className="text-sm max-w-xs">
+                      Comienza a añadir puntos a los equipos para ver el historial y la progresión de la partida en tiempo real.
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>

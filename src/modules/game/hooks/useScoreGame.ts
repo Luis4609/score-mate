@@ -7,23 +7,152 @@ import {
   Team,
 } from "@/lib/types";
 import { gameConfigs } from "@/modules/game/config/game-config";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 
 export const useScoreMateGame = () => {
-  const [gameConfig, setGameConfig] = useState<GameConfig>(gameConfigs[0]);
-  const [teams, setTeams] = useState<Team[]>([]);
+  // 1. Custom presets state loaded from localStorage
+  const [customPresets, setCustomPresets] = useState<GameConfig[]>(() => {
+    const saved = localStorage.getItem("score-mate-custom-presets");
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  // Combined game configs
+  const allConfigs = [...gameConfigs, ...customPresets];
+
+  // 2. Core states loaded from localStorage
+  const [gameConfig, setGameConfig] = useState<GameConfig>(() => {
+    const saved = localStorage.getItem("score-mate-current-config");
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error("Error parsing game config from localStorage", e);
+      }
+    }
+    return gameConfigs[0];
+  });
+
+  const [teams, setTeams] = useState<Team[]>(() => {
+    const saved = localStorage.getItem("score-mate-teams");
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error("Error parsing teams from localStorage", e);
+      }
+    }
+    return [];
+  });
+
   const [newTeamName, setNewTeamName] = useState<string>("");
   const [pointsToAdd, setPointsToAdd] = useState<PointsToAdd>({});
-  const [gameAlert, setGameAlert] = useState<GameAlertData | null>(null);
-  const [history, setHistory] = useState<HistoryEntry[]>([]);
 
+  const [gameAlert, setGameAlert] = useState<GameAlertData | null>(() => {
+    const saved = localStorage.getItem("score-mate-game-alert");
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error("Error parsing game alert from localStorage", e);
+      }
+    }
+    return null;
+  });
+
+  const [history, setHistory] = useState<HistoryEntry[]>(() => {
+    const saved = localStorage.getItem("score-mate-history");
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error("Error parsing history from localStorage", e);
+      }
+    }
+    return [];
+  });
+
+  // Ref to prevent resetting state on first render
+  const isInitialMount = useRef(true);
+
+  // Effect to reset game state when config changes (only on user action, not on mount)
   useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
     setTeams([]);
     setGameAlert(null);
     setHistory([]);
     setNewTeamName("");
     setPointsToAdd({});
+  }, [gameConfig.value]); // Trigger on value change
+
+  // 3. Auto-save states to localStorage on change
+  useEffect(() => {
+    localStorage.setItem("score-mate-current-config", JSON.stringify(gameConfig));
   }, [gameConfig]);
+
+  useEffect(() => {
+    localStorage.setItem("score-mate-teams", JSON.stringify(teams));
+  }, [teams]);
+
+  useEffect(() => {
+    localStorage.setItem("score-mate-history", JSON.stringify(history));
+  }, [history]);
+
+  useEffect(() => {
+    localStorage.setItem("score-mate-game-alert", JSON.stringify(gameAlert));
+  }, [gameAlert]);
+
+  useEffect(() => {
+    localStorage.setItem("score-mate-custom-presets", JSON.stringify(customPresets));
+  }, [customPresets]);
+
+  // Custom presets management
+  const saveCustomPreset = useCallback((preset: GameConfig) => {
+    setCustomPresets((prev) => {
+      const filtered = prev.filter((p) => p.value !== preset.value);
+      return [...filtered, { ...preset, isCustom: true }];
+    });
+  }, []);
+
+  const deleteCustomPreset = useCallback((value: string) => {
+    setCustomPresets((prev) => prev.filter((p) => p.value !== value));
+    setGameConfig((current) => {
+      if (current.value === value) {
+        return gameConfigs[0];
+      }
+      return current;
+    });
+  }, []);
+
+  // Helper to check winner
+  const checkGameStatus = useCallback(
+    (currentTeams: Team[]): { gameIsOver: boolean; winner: Team | null; triggerer: Team | null } => {
+      if (gameConfig.defaultMaxScore <= 0 || currentTeams.length === 0) {
+        return { gameIsOver: false, winner: null, triggerer: null };
+      }
+
+      // Check if any team has reached/exceeded the defaultMaxScore
+      const triggeringTeam = currentTeams.find((t) => t.score >= gameConfig.defaultMaxScore);
+      if (!triggeringTeam) {
+        return { gameIsOver: false, winner: null, triggerer: null };
+      }
+
+      let winner: Team = currentTeams[0];
+      if (gameConfig.winningCondition === "highest_wins") {
+        winner = currentTeams.reduce((best, t) => (t.score > best.score ? t : best), currentTeams[0]);
+      } else if (gameConfig.winningCondition === "lowest_wins") {
+        winner = currentTeams.reduce((best, t) => (t.score < best.score ? t : best), currentTeams[0]);
+      } else {
+        // none
+        return { gameIsOver: false, winner: null, triggerer: null };
+      }
+
+      return { gameIsOver: true, winner, triggerer: triggeringTeam };
+    },
+    [gameConfig.defaultMaxScore, gameConfig.winningCondition]
+  );
 
   const addTeam = useCallback(() => {
     if (newTeamName.trim() !== "" && teams.length < gameConfig.maxPlayers) {
@@ -48,31 +177,15 @@ export const useScoreMateGame = () => {
       if (!team) return;
 
       const newScore = team.score + points;
-      let gameIsOver = false;
-      let currentWinningTeam: Team | undefined = undefined;
-
       const updatedTeams = teams.map((t, i) => {
         if (i === teamIndex) {
-          if (newScore >= gameConfig.defaultMaxScore) {
-            gameIsOver = true;
-            currentWinningTeam = { ...t, score: gameConfig.defaultMaxScore }; // Capture winning team details
-            return { ...t, score: gameConfig.defaultMaxScore };
-          }
-          return { ...t, score: newScore };
+          const cappedScore = gameConfig.defaultMaxScore > 0
+            ? Math.max(0, Math.min(newScore, gameConfig.defaultMaxScore))
+            : Math.max(0, newScore);
+          return { ...t, score: cappedScore };
         }
         return t;
       });
-
-      // If not already game over by this team, check if any other team is also at max score
-      if (!gameIsOver) {
-        for (const t of updatedTeams) {
-          if (t.score >= gameConfig.defaultMaxScore) {
-            gameIsOver = true;
-            currentWinningTeam = t; // Prioritize the team that just scored if multiple hit max simultaneously
-            break;
-          }
-        }
-      }
 
       setTeams(updatedTeams);
       setHistory((prevHistory) => [
@@ -80,18 +193,27 @@ export const useScoreMateGame = () => {
         { snapshot: updatedTeams, changedTeamIndex: teamIndex },
       ]);
 
-      if (gameIsOver && currentWinningTeam) {
+      const { gameIsOver, winner, triggerer } = checkGameStatus(updatedTeams);
+
+      if (gameIsOver && winner && triggerer) {
+        let description = "";
+        if (gameConfig.winningCondition === "lowest_wins") {
+          description = `¡El equipo ${triggerer.name} ha alcanzado la puntuación límite de ${gameConfig.defaultMaxScore}! Ganador: ${winner.name} con ${winner.score} pts.`;
+        } else {
+          description = `¡El equipo ${winner.name} ha alcanzado la puntuación máxima de ${gameConfig.defaultMaxScore}!`;
+        }
         setGameAlert({
           title: "¡FIN DE LA PARTIDA!",
-          description: `¡El equipo ${currentWinningTeam.name} ha alcanzado la puntuación máxima de ${gameConfig.defaultMaxScore}!`,
+          description,
           variant: "destructive",
-          winningTeamName: currentWinningTeam.name,
+          winningTeamName: winner.name,
+          triggeringTeamName: triggerer.name,
         });
       } else {
         setGameAlert(null);
       }
     },
-    [teams, gameConfig.defaultMaxScore]
+    [teams, gameConfig.defaultMaxScore, gameConfig.winningCondition, checkGameStatus]
   );
 
   const handleCustomPoints = useCallback(
@@ -138,7 +260,9 @@ export const useScoreMateGame = () => {
       setHistory((prevHistory) => {
         const validatedNewScore = Math.max(
           0,
-          Math.min(newScoreValue, gameConfig.defaultMaxScore)
+          gameConfig.defaultMaxScore > 0
+            ? Math.min(newScoreValue, gameConfig.defaultMaxScore)
+            : newScoreValue
         );
         const newHistory = prevHistory
           .slice(0, historyIndex + 1)
@@ -185,7 +309,9 @@ export const useScoreMateGame = () => {
                   0) + pointsDelta;
               newCalculatedScore = Math.max(
                 0,
-                Math.min(newCalculatedScore, gameConfig.defaultMaxScore)
+                gameConfig.defaultMaxScore > 0
+                  ? Math.min(newCalculatedScore, gameConfig.defaultMaxScore)
+                  : newCalculatedScore
               );
               nextSnapshot[teamThatChangedIndex].score = newCalculatedScore;
             }
@@ -198,25 +324,21 @@ export const useScoreMateGame = () => {
         }
         setTeams(currentTeamsState);
 
-        let gameIsOver = false;
-        let finalWinningTeam: Team = {
-          name: "",
-          score: 0,
-        };
-        currentTeamsState.forEach((team) => {
-          if (team.score >= gameConfig.defaultMaxScore) {
-            gameIsOver = true;
-            finalWinningTeam = team; // In case of multiple, last one checked wins here. Could be refined.
-          }
-        });
+        const { gameIsOver, winner, triggerer } = checkGameStatus(currentTeamsState);
 
-        if (gameIsOver && finalWinningTeam) {
-          // Added check for finalWinningTeam
+        if (gameIsOver && winner && triggerer) {
+          let description = "";
+          if (gameConfig.winningCondition === "lowest_wins") {
+            description = `¡El equipo ${triggerer.name} ha alcanzado la puntuación límite de ${gameConfig.defaultMaxScore}! Ganador: ${winner.name} con ${winner.score} pts.`;
+          } else {
+            description = `¡El equipo ${winner.name} ha alcanzado la puntuación máxima de ${gameConfig.defaultMaxScore}!`;
+          }
           setGameAlert({
             title: "¡FIN DE LA PARTIDA!",
-            description: `¡El equipo ${finalWinningTeam.name} ha alcanzado la puntuación máxima de ${gameConfig.defaultMaxScore}!`,
+            description,
             variant: "destructive",
-            winningTeamName: finalWinningTeam.name,
+            winningTeamName: winner.name,
+            triggeringTeamName: triggerer.name,
           });
         } else {
           setGameAlert(null);
@@ -224,7 +346,7 @@ export const useScoreMateGame = () => {
         return newHistory;
       });
     },
-    [gameConfig.defaultMaxScore]
+    [gameConfig.defaultMaxScore, gameConfig.winningCondition, checkGameStatus]
   );
 
   const removeTeam = useCallback(
@@ -265,27 +387,21 @@ export const useScoreMateGame = () => {
           })
           .filter((entry) => entry.snapshot.length > 0);
 
-        let gameIsOver = false;
-        let finalWinningTeam: Team = {
-          name: "",
-          score: 0,
-        };
-        if (updatedTeams.length > 0) {
-          updatedTeams.forEach((team) => {
-            if (team.score >= gameConfig.defaultMaxScore) {
-              gameIsOver = true;
-              finalWinningTeam = team;
-            }
-          });
-        }
+        const { gameIsOver, winner, triggerer } = checkGameStatus(updatedTeams);
 
-        if (gameIsOver && finalWinningTeam) {
-          // Added check for finalWinningTeam
+        if (gameIsOver && winner && triggerer) {
+          let description = "";
+          if (gameConfig.winningCondition === "lowest_wins") {
+            description = `¡El equipo ${triggerer.name} ha alcanzado la puntuación límite de ${gameConfig.defaultMaxScore}! Ganador: ${winner.name} con ${winner.score} pts.`;
+          } else {
+            description = `¡El equipo ${winner.name} ha alcanzado la puntuación máxima de ${gameConfig.defaultMaxScore}!`;
+          }
           setGameAlert({
             title: "¡FIN DE LA PARTIDA!",
-            description: `¡El equipo ${finalWinningTeam.name} ha alcanzado la puntuación máxima de ${gameConfig.defaultMaxScore}!`,
+            description,
             variant: "destructive",
-            winningTeamName: finalWinningTeam.name,
+            winningTeamName: winner.name,
+            triggeringTeamName: triggerer.name,
           });
         } else {
           setGameAlert(null);
@@ -293,21 +409,25 @@ export const useScoreMateGame = () => {
         return newHistory;
       });
     },
-    [teams, gameConfig.defaultMaxScore]
+    [teams, gameConfig.defaultMaxScore, gameConfig.winningCondition, checkGameStatus]
   );
 
   return {
     gameConfig,
+    allConfigs,
+    customPresets,
+    setGameConfig,
+    saveCustomPreset,
+    deleteCustomPreset,
     teams,
     newTeamName,
     pointsToAdd,
     gameAlert,
     history,
-    setGameConfig,
     setNewTeamName,
     setPointsToAdd,
     addTeam,
-    addScore, // Exporting addScore as it might be used by TeamScoreCard for fixed points
+    addScore,
     handleCustomPoints,
     restartGame,
     newGame,
