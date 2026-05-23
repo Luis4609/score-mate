@@ -204,7 +204,7 @@ export const GameSettingsDrawer: React.FC<GameSettingsDrawerProps> = ({
                 <label className="text-[10px] font-bold text-muted-foreground uppercase">Condición de Victoria</label>
                 <select
                   value={customWinningCond}
-                  onChange={(e) => setCustomWinningCond(e.target.value as any)}
+                  onChange={(e) => setCustomWinningCond(e.target.value as "highest_wins" | "lowest_wins" | "none")}
                   className="h-9 text-xs rounded-xl border bg-background px-3 focus:outline-none focus:ring-1 focus:ring-primary text-foreground"
                 >
                   <option value="highest_wins">Mayor puntuación gana</option>
@@ -217,7 +217,7 @@ export const GameSettingsDrawer: React.FC<GameSettingsDrawerProps> = ({
                 <label className="text-[10px] font-bold text-muted-foreground uppercase">Modo de Juego</label>
                 <select
                   value={customMode}
-                  onChange={(e) => setCustomMode(e.target.value as any)}
+                  onChange={(e) => setCustomMode(e.target.value as "individual" | "teams" | "both")}
                   className="h-9 text-xs rounded-xl border bg-background px-3 focus:outline-none focus:ring-1 focus:ring-primary text-foreground"
                 >
                   <option value="both">Ambos (Equipos/Indiv.)</option>
