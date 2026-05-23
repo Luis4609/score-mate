@@ -9,7 +9,7 @@ describe("useScoreMateGame hook", () => {
   });
 
   // Helpers to handle React rendering cycles during tests
-  const addTeamHelper = (result: any, name: string) => {
+  const addTeamHelper = (result: { current: ReturnType<typeof useScoreMateGame> }, name: string) => {
     act(() => {
       result.current.setNewTeamName(name);
     });
@@ -18,7 +18,7 @@ describe("useScoreMateGame hook", () => {
     });
   };
 
-  const addScoreHelper = (result: any, teamIndex: number, points: string) => {
+  const addScoreHelper = (result: { current: ReturnType<typeof useScoreMateGame> }, teamIndex: number, points: string) => {
     act(() => {
       result.current.setPointsToAdd({ [teamIndex]: points });
     });
